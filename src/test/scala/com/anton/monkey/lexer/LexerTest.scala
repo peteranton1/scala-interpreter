@@ -138,7 +138,7 @@ class LexerTest extends FunSuite {
     val lexer = Lexer.New(input)
     for (expected <- tests) {
       val actual = lexer.NextToken()
-      println(actual)
+      //println(actual)
       assert(actual == expected)
     }
   }

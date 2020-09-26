@@ -26,7 +26,6 @@ class Lexer(input: String) {
 
   def NextToken(): Token = {
     skipWhitespace()
-    var incrementPosition=true
     val tok = ch match {
       case '+' =>
         newToken(Token.PLUS, ch)
@@ -71,19 +70,15 @@ class Lexer(input: String) {
       case _ =>
         if (isLetter(ch)) {
           val literal = readIdentifier()
-          incrementPosition=false
           Token(Token.LookupIdent(literal), literal)
         } else if (isDigit(ch)) {
           val literal = readNumber()
-          incrementPosition=false
           Token(Token.INT, literal)
         } else {
           newToken(Token.ILLEGAL, ch)
         }
     }
-    if (incrementPosition) {
-      readChar()
-    }
+    readChar()
     tok
   }
 
@@ -98,10 +93,10 @@ class Lexer(input: String) {
 
   def readNumber(): String = {
     val pos = position
-    while (isDigit(ch)) {
+    while (isDigit(peekChar())) {
       readChar()
     }
-    input.substring(pos, position)
+    input.substring(pos, position+1)
   }
 
   def isDigit(ch: Char): Boolean = {
@@ -110,10 +105,10 @@ class Lexer(input: String) {
 
   def readIdentifier(): String = {
     val posStart = position
-    while (isLetter(ch)) {
+    while (isLetter(peekChar())) {
       readChar()
     }
-    input.substring(posStart, position)
+    input.substring(posStart, position+1)
   }
 
   def readString(): String = {
