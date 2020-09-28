@@ -1,36 +1,24 @@
 package com.anton.monkey.token
 
+case class Expecteds(input:String, tokenType: TokenType)
+
 class TokenTest extends org.scalatest.FunSuite {
 
-  test("should return IDENT"){
-    assert(Token.LookupIdent("someIdent") == Token.IDENT)
-  }
-
-  test("should return FUNCTION"){
-    assert(Token.LookupIdent("fn") == Token.FUNCTION)
-  }
-
-  test("should return LET"){
-    assert(Token.LookupIdent("let") == Token.LET)
-  }
-
-  test("should return IF"){
-    assert(Token.LookupIdent("if") == Token.IF)
-  }
-
-  test("should return ELSE"){
-    assert(Token.LookupIdent("else") == Token.ELSE)
-  }
-
-  test("should return RETURN"){
-    assert(Token.LookupIdent("return") == Token.RETURN)
-  }
-
-  test("should return TRUE"){
-    assert(Token.LookupIdent("true") == Token.TRUE)
-  }
-
-  test("should return FALSE"){
-    assert(Token.LookupIdent("false") == Token.FALSE)
+  test("should return Ident or Keyword"){
+    val tests: List[Expecteds] = List(
+      Expecteds("someIdent", Token.IDENT),
+      Expecteds("fn", Token.FUNCTION),
+      Expecteds("let", Token.LET),
+      Expecteds("if", Token.IF),
+      Expecteds("else", Token.ELSE),
+      Expecteds("return", Token.RETURN),
+      Expecteds("true", Token.TRUE),
+      Expecteds("false", Token.FALSE)
+    )
+    for (expected <- tests) {
+      val actual = Token.LookupIdent(expected.input)
+      //println(expected)
+      assert(actual == expected.tokenType)
+    }
   }
 }
