@@ -127,9 +127,8 @@ case class IfExpression(token: Token, condition: Expression,
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    val frag = if(alternative != null ) "else " + alternative.String() else  ""
-    "if " + condition.String() + " " + consequence.String() +
-      frag
+    val frag = if (alternative != null) "else " + alternative.String() else ""
+    "if " + condition.String() + " " + consequence.String() + frag
   }
 }
 
