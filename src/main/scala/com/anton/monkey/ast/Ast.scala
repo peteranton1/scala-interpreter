@@ -16,17 +16,17 @@ trait Expression extends Node {
   def expressionNode(): Unit
 }
 
-case class Program(Statements: List[Statement]) {
+case class Program(statements: List[Statement]) {
   def TokenLiteral(): String = {
-    if (Statements.nonEmpty) {
-      return Statements.head.TokenLiteral()
+    if (statements.nonEmpty) {
+      return statements.head.TokenLiteral()
     }
-    return ""
+    ""
   }
 
   def String(): String = {
     val buf = new StringBuilder()
-    Statements.foreach {
+    statements.foreach {
       buf.append(_)
     }
     buf.toString()
@@ -90,7 +90,8 @@ case class StringLiteral(token: Token, value: String) extends Expression {
   override def String(): String = token.literal
 }
 
-case class PrefixExpression(token: Token, operator: String, right: Expression) extends Expression {
+case class PrefixExpression(token: Token,
+                            operator: String, right: Expression) extends Expression {
   override def expressionNode(): Unit = {}
 
   override def TokenLiteral(): String = token.literal
