@@ -5,7 +5,7 @@ import com.anton.monkey.lexer.Lexer
 import com.anton.monkey.token.{Token, TokenType}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 class Parser(l: Lexer) {
 
@@ -103,6 +103,7 @@ class Parser(l: Lexer) {
     if (peekTokenIs(Token.SEMICOLON)) {
       nextToken()
     }
+    nextToken()
     LetStatement(token, ident, value)
   }
 
@@ -113,6 +114,7 @@ class Parser(l: Lexer) {
     if (peekTokenIs(Token.SEMICOLON)) {
       nextToken()
     }
+    nextToken()
     ReturnStatement(token, returnValue)
   }
 
@@ -126,12 +128,12 @@ class Parser(l: Lexer) {
   }
 
   def parseExpression(precedence: Int): Expression = {
-    val prefix = prefixParserFns(peekToken.tokenType)
-    if (prefix == null) {
+    val prefix = Try(prefixParserFns(curToken.tokenType))
+    if (prefix == Failure) {
       noPrefixParseFnError(curToken.tokenType)
       return null
     }
-    var leftExpr = prefix()
+    var leftExpr = prefix.get()
     while (!peekTokenIs(Token.SEMICOLON) && precedence < peekPrecedence()) {
       val infix = infixParserFns(peekToken.tokenType)
       if (infix == null) {
@@ -161,13 +163,13 @@ class Parser(l: Lexer) {
   def noPrefixParseFnError(tokenType: TokenType): Unit = {
     val msg = String.format("no prefix parse function for '%s' found",
       tokenType)
-    errors += msg
+    errors ++ List(msg)
   }
 
   def peekError(tokenType: TokenType): Unit = {
     val msg = String.format("expected next token to be '%s', got='%s'",
       tokenType, peekToken.tokenType)
-    errors += msg
+    errors ++ List(msg)
   }
 
   def expectPeek(tokenType: TokenType): Boolean = {
@@ -351,7 +353,7 @@ class Parser(l: Lexer) {
       if (value.isFailure) {
         val msg = String.format("could not parse '%s' as integer",
           token.literal)
-        errors += msg
+        errors ++ List(msg)
         return null
       }
       IntegerLiteral(token, value.get)
@@ -395,6 +397,14 @@ class Parser(l: Lexer) {
       HashLiteral(token, pairs)
     }
   }
-
 }
 
+object Parser {
+
+  def New(lexer: Lexer): Parser = {
+    val parser = new Parser(lexer)
+    parser.nextToken()
+    parser.nextToken()
+    parser
+  }
+}
