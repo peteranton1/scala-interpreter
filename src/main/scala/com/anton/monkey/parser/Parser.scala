@@ -5,7 +5,7 @@ import com.anton.monkey.lexer.Lexer
 import com.anton.monkey.token.{Token, TokenType}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 class Parser(l: Lexer) {
 
@@ -21,6 +21,7 @@ class Parser(l: Lexer) {
 
   // Pratt parse map
   val precedences: Map[TokenType, Int] = Map(
+    Token.COMMA -> LOWEST,
     Token.EQ -> EQUALS,
     Token.NOT_EQ -> EQUALS,
     Token.LT -> LESSGREATER,
@@ -94,12 +95,11 @@ class Parser(l: Lexer) {
       return null
     }
     nextToken()
-    val value = parseExpression(LOWEST)
-    // TODO
-    //    if(value.isInstanceOf(FunctionLiteral)){
-    //      val fl = value.asInstanceOf(FunctionLiteral)
-    //          fl.Name =???
-    //    }
+    val value = parseExpression(LOWEST) match {
+      case fl: FunctionLiteral =>
+        addNameFunctionLiteral(fl, ident.TokenLiteral())
+      case expr: Expression => expr
+    }
     if (peekTokenIs(Token.SEMICOLON)) {
       nextToken()
     }
@@ -124,17 +124,29 @@ class Parser(l: Lexer) {
     if (peekTokenIs(Token.SEMICOLON)) {
       nextToken()
     }
+    nextToken()
     ExpressionStatement(token, expr)
   }
 
   def parseExpression(precedence: Int): Expression = {
     val prefix = Try(prefixParserFns(curToken.tokenType))
-    if (prefix == Failure) {
-      noPrefixParseFnError(curToken.tokenType)
+    val failed = prefix match {
+      case Success(value) => false
+      case Failure(exception) =>
+        noPrefixParseFnError(curToken.tokenType)
+        true
+    }
+    if (failed) {
       return null
     }
-    var leftExpr = prefix.get()
-    while (!peekTokenIs(Token.SEMICOLON) && precedence < peekPrecedence()) {
+
+    val function = prefix.get()
+    var leftExpr = function
+    while (
+      !peekTokenIs(Token.SEMICOLON) &&
+        !peekTokenIs(Token.RPAREN) &&
+        !peekTokenIs(Token.EOF) &&
+        precedence < peekPrecedence()) {
       val infix = infixParserFns(peekToken.tokenType)
       if (infix == null) {
         return leftExpr
@@ -146,10 +158,12 @@ class Parser(l: Lexer) {
   }
 
   def tokenPrecedence(token: Token): Int = {
-    precedences(token.tokenType) match {
-      case x => x
+    val precedence = Try(precedences(token.tokenType))
+    val result = precedence match {
+      case Success(x) => x
       case _ => LOWEST
     }
+    result
   }
 
   def peekPrecedence(): Int = {
@@ -252,22 +266,31 @@ class Parser(l: Lexer) {
   def parseFunctionLiteral(): () => Expression = {
     () => {
       val token = curToken
+      if (!expectPeek(Token.LPAREN)) {
+        return null
+      }
       val params = parseFunctionParameters()
       if (!expectPeek(Token.LBRACE)) {
         return null
       }
       val body = parseBlockStatement()
-      FunctionLiteral(token, params, body, token.literal)
+      FunctionLiteral(token, params, body, null)
     }
+  }
+
+  def addNameFunctionLiteral(function: FunctionLiteral, name: String): FunctionLiteral = {
+    FunctionLiteral(function.token, function.parameters, function.body, name)
   }
 
   def parseFunctionParameters(): List[Identifier] = {
     val identifiers = new ListBuffer[Identifier]
     if (peekTokenIs(Token.RPAREN)) {
+      nextToken()
       return identifiers.toList
     }
     nextToken()
     identifiers += Identifier(curToken, curToken.literal)
+
     while (peekTokenIs(Token.COMMA)) {
       nextToken() // consume ident
       nextToken() // consumer Comma
@@ -282,13 +305,12 @@ class Parser(l: Lexer) {
   def parseBlockStatement(): BlockStatement = {
     val token = curToken
     var statements = new ListBuffer[Statement]
-    nextToken()
     while (!curTokenIs(Token.RBRACE) && !curTokenIs(Token.EOF)) {
+      nextToken()
       val stmt = parseStatement()
       if (stmt != null) {
         statements += stmt
       }
-      nextToken()
     }
     BlockStatement(token, statements.toList)
   }
@@ -326,7 +348,7 @@ class Parser(l: Lexer) {
       nextToken()
       list += parseExpression(LOWEST)
     }
-    if (expectPeek(end)) {
+    if (!expectPeek(end)) {
       return null
     }
     list.toList
@@ -377,7 +399,7 @@ class Parser(l: Lexer) {
   def parseHashLiteral(): () => Expression = {
     () => {
       val token = curToken
-      var pairs:Map[Expression, Expression] = Map()
+      var pairs: Map[Expression, Expression] = Map()
       while (!peekTokenIs(Token.RBRACE)) {
         nextToken()
         val key = parseExpression(LOWEST)

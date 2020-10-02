@@ -2,6 +2,8 @@ package com.anton.monkey.ast
 
 import com.anton.monkey.token.Token
 
+import scala.collection.mutable.ListBuffer
+
 trait Node {
   def TokenLiteral(): String
 
@@ -26,8 +28,8 @@ case class Program(statements: List[Statement]) {
 
   def String(): String = {
     val buf = new StringBuilder()
-    statements.foreach {
-      buf.append(_)
+    statements.foreach { s =>
+      buf.append(s.String())
     }
     buf.toString()
   }
@@ -97,7 +99,7 @@ case class PrefixExpression(token: Token,
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    "{" + operator + right.String() + "}"
+    "(" + operator + right.String() + ")"
   }
 }
 
@@ -108,7 +110,7 @@ case class InfixExpression(token: Token, left: Expression,
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    "{" + left.String() + operator + right.String() + "}"
+    "(" + left.String() + " " + operator + " " + right.String() + ")"
   }
 }
 
@@ -128,7 +130,7 @@ case class IfExpression(token: Token, condition: Expression,
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    val frag = if (alternative != null) "else " + alternative.String() else ""
+    val frag = if (alternative != null) " else " + alternative.String() else ""
     "if " + condition.String() + " " + consequence.String() + frag
   }
 }
@@ -138,7 +140,7 @@ case class BlockStatement(token: Token, statements: List[Statement]) extends Sta
 
   override def TokenLiteral(): String = token.literal
 
-  override def String(): String = statements.map(_.String()).mkString(" ")
+  override def String(): String = "{ " + statements.map(_.String()).mkString(" ") + " }"
 }
 
 case class FunctionLiteral(token: Token, parameters: List[Identifier],
@@ -148,7 +150,8 @@ case class FunctionLiteral(token: Token, parameters: List[Identifier],
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    TokenLiteral() + "<" + name + ">" + "(" +
+    val fnname = if(name != null) "<" + name + ">" else ""
+    TokenLiteral() + fnname + "(" +
       parameters.map(_.String()).mkString(", ") +
       ")" + body.String()
   }
@@ -160,9 +163,8 @@ case class CallExpression(token: Token, function: Expression, arguments: List[Ex
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    function.String() + "(" +
-      arguments.map(_.String()).mkString(", ") +
-      ")"
+    val str = arguments.map(_.String()).mkString(", ")
+    function.String() + "(" + str + ")"
   }
 }
 
@@ -197,8 +199,8 @@ case class HashLiteral(token: Token, pairs: Map[Expression, Expression]) extends
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    var buf = ""
-    pairs.foreachEntry((k, v) => buf += k.String() + ": " + v.String())
-    "{" + buf + "}"
+    val list = new ListBuffer[String]
+    pairs.foreachEntry((k, v) => list += k.String() + ": " + v.String())
+    "{" + list.toList.mkString(", ") + "}"
   }
 }
