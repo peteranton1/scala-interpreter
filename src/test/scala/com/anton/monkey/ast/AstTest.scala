@@ -6,11 +6,12 @@ import org.scalatest.FunSuite
 class AstTest extends FunSuite {
   test("should conform to LET statement") {
     val program = Program(List(LetStatement(
-      Token(Token.LET,Token.LET.tokenType),
+      Token(Token.LET, "let"),
       Identifier(Token(Token.IDENT, "myVar"), "myVar"),
       Identifier(Token(Token.IDENT, "anotherVar"), "anotherVar")
     )))
-    val expectedStmt = "let myVar = anotherVar;"
-    assert( program.String() != expectedStmt )
+    val expected = "let myVar = anotherVar;"
+    val actual = program.String()
+    assert(actual == expected)
   }
 }

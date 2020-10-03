@@ -41,7 +41,7 @@ case class LetStatement(token: Token, name: Identifier, value: Expression) exten
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    token.literal + " " + name.String() + "=" + value.String() + ";"
+    token.literal + " " + name.String() + " = " + value.String() + ";"
   }
 }
 

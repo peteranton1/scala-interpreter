@@ -279,7 +279,7 @@ class ParserTest extends FunSuite {
 
   test("should FunctionLiteral with name") {
     val tests = List(
-      TestInputString("let myfunction = fn() { }", "let myfunction=fn<myfunction>(){  };")
+      TestInputString("let myfunction = fn() { }", "let myfunction = fn<myfunction>(){  };")
     )
     tests.foreach(
       tt => testStringInputOutputFn(tt)
@@ -335,7 +335,7 @@ class ParserTest extends FunSuite {
   test("should ParseStatements") {
     val tests = List(
       TestInputString("let x = 1; return 1; 5 + 5; let myfn = fn(x){x}; if(1){add(5)}",
-        "let x=1;return 1;(5 + 5)let myfn=fn<myfn>(x){ x };if (1) { add(5) }")
+        "let x = 1;return 1;(5 + 5)let myfn = fn<myfn>(x){ x };if (1) { add(5) }")
     )
     tests.foreach(
       tt => testStringInputOutputFn(tt)
