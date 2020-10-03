@@ -252,7 +252,7 @@ class ParserTest extends FunSuite {
 
   test("should IfExpression") {
     val tests = List(
-      TestInputString("if (x < y) { x }", "if (x < y) { x }")
+      TestInputString("if (x < y) { x }", "if ((x < y)) { x }")
     )
     tests.foreach(
       tt => testStringInputOutputFn(tt)
@@ -261,7 +261,7 @@ class ParserTest extends FunSuite {
 
   test("should IfElseExpression") {
     val tests = List(
-      TestInputString("if (x < y) { x } else { y }", "if (x < y) { x } else { y }")
+      TestInputString("if (x < y) { x } else { y }", "if ((x < y)) { x } else { y }")
     )
     tests.foreach(
       tt => testStringInputOutputFn(tt)
@@ -326,6 +326,16 @@ class ParserTest extends FunSuite {
         "{one: 1, two: 2, three: 3}")
       , TestInputString("{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}",
         "{one: (0 + 1), two: (10 - 8), three: (15 / 5)}")
+    )
+    tests.foreach(
+      tt => testStringInputOutputFn(tt)
+    )
+  }
+
+  test("should ParseStatements") {
+    val tests = List(
+      TestInputString("let x = 1; return 1; 5 + 5; let myfn = fn(x){x}; if(1){add(5)}",
+        "let x=1;return 1;(5 + 5)let myfn=fn<myfn>(x){ x };if (1) { add(5) }")
     )
     tests.foreach(
       tt => testStringInputOutputFn(tt)

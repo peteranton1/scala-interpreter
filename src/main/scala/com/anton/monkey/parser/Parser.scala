@@ -35,7 +35,7 @@ class Parser(l: Lexer) {
   )
 
   // Member variables
-  var errors: List[String] = List.empty
+  val errors = new ListBuffer[String]
 
   private val emptyToken: Token = Token(Token.ILLEGAL, Token.ILLEGAL.tokenType)
   var curToken: Token = emptyToken
@@ -177,13 +177,13 @@ class Parser(l: Lexer) {
   def noPrefixParseFnError(tokenType: TokenType): Unit = {
     val msg = String.format("no prefix parse function for '%s' found",
       tokenType)
-    errors ++ List(msg)
+    errors += msg
   }
 
   def peekError(tokenType: TokenType): Unit = {
     val msg = String.format("expected next token to be '%s', got='%s'",
       tokenType, peekToken.tokenType)
-    errors ++ List(msg)
+    errors += msg
   }
 
   def expectPeek(tokenType: TokenType): Boolean = {
@@ -307,9 +307,11 @@ class Parser(l: Lexer) {
     var statements = new ListBuffer[Statement]
     while (!curTokenIs(Token.RBRACE) && !curTokenIs(Token.EOF)) {
       nextToken()
-      val stmt = parseStatement()
-      if (stmt != null) {
-        statements += stmt
+      if(!curTokenIs(Token.RBRACE)) {
+        val stmt = parseStatement()
+        if (stmt != null) {
+          statements += stmt
+        }
       }
     }
     BlockStatement(token, statements.toList)
@@ -375,7 +377,7 @@ class Parser(l: Lexer) {
       if (value.isFailure) {
         val msg = String.format("could not parse '%s' as integer",
           token.literal)
-        errors ++ List(msg)
+        errors += msg
         return null
       }
       IntegerLiteral(token, value.get)
