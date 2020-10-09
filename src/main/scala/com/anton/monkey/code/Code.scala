@@ -66,13 +66,13 @@ case class Definition(name: String,
 
 object Code {
 
-  def lookup(op: Byte): (Definition, String) =
+  def lookup(op: OpCode): (Definition, String) =
     definitions.get(op) match {
       case Some(value) => (value, null)
       case None => (null, String.format("opcode %d undefined", op))
     }
 
-  def make(op: Byte, operands: Array[Int]): Array[Byte] = {
+  def make(op: OpCode, operands: Array[Int]): Array[Byte] = {
     val definition = definitions.get(op) match {
       case None => return Array[Byte]()
       case Some(value) => value
@@ -149,38 +149,39 @@ object Code {
     ByteBuffer.allocate(4).putInt(value).array()
   }
 
-  val OpConstant: Byte = 0
-  val OpPop: Byte = 1
-  val OpAdd: Byte = 2
-  val OpSub: Byte = 3
-  val OpMul: Byte = 4
-  val OpDiv: Byte = 5
-  val OpTrue: Byte = 6
-  val OpFalse: Byte = 7
-  val OpEqual: Byte = 8
-  val OpNotEqual: Byte = 9
-  val OpGreaterThan: Byte = 10
-  val OpMinus: Byte = 11
-  val OpBang: Byte = 12
-  val OpJumpNotTruthy: Byte = 13
-  val OpJump: Byte = 14
-  val OpNull: Byte = 15
-  val OpGetGlobal: Byte = 16
-  val OpSetGlobal: Byte = 17
-  val OpArray: Byte = 18
-  val OpHash: Byte = 19
-  val OpIndex: Byte = 20
-  val OpCall: Byte = 21
-  val OpReturnValue: Byte = 22
-  val OpReturn: Byte = 23
-  val OpGetLocal: Byte = 24
-  val OpSetLocal: Byte = 25
-  val OpGetBuiltin: Byte = 26
-  val OpClosure: Byte = 27
-  val OpGetFree: Byte = 28
-  val OpCurrentClosure: Byte = 29
+  type OpCode = Byte
+  val OpConstant: OpCode = 0.toByte
+  val OpPop: OpCode = 1.toByte
+  val OpAdd: OpCode = 2.toByte
+  val OpSub: OpCode = 3.toByte
+  val OpMul: OpCode = 4.toByte
+  val OpDiv: OpCode = 5.toByte
+  val OpTrue: OpCode = 6.toByte
+  val OpFalse: OpCode = 7.toByte
+  val OpEqual: OpCode = 8.toByte
+  val OpNotEqual: OpCode = 9.toByte
+  val OpGreaterThan: OpCode = 10.toByte
+  val OpMinus: OpCode = 11.toByte
+  val OpBang: OpCode = 12.toByte
+  val OpJumpNotTruthy: OpCode = 13.toByte
+  val OpJump: OpCode = 14.toByte
+  val OpNull: OpCode = 15.toByte
+  val OpGetGlobal: OpCode = 16.toByte
+  val OpSetGlobal: OpCode = 17.toByte
+  val OpArray: OpCode = 18.toByte
+  val OpHash: OpCode = 19.toByte
+  val OpIndex: OpCode = 20.toByte
+  val OpCall: OpCode = 21.toByte
+  val OpReturnValue: OpCode = 22.toByte
+  val OpReturn: OpCode = 23.toByte
+  val OpGetLocal: OpCode = 24.toByte
+  val OpSetLocal: OpCode = 25.toByte
+  val OpGetBuiltin: OpCode = 26.toByte
+  val OpClosure: OpCode = 27.toByte
+  val OpGetFree: OpCode = 28.toByte
+  val OpCurrentClosure: OpCode = 29.toByte
 
-  val definitions: Map[Byte, Definition] = Map(
+  val definitions: Map[OpCode, Definition] = Map(
     OpConstant -> Definition("OpConstant", List(2)),
     OpPop -> Definition("OpPop", List()),
     OpAdd -> Definition("OpAdd", List()),
