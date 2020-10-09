@@ -5,12 +5,12 @@ import com.anton.monkey.objectliteral.ObjectType.ARRAY_OBJ
 case class Builtin(name: String, builtin: BuiltinObj)
 
 object Builtin {
-  private def letFunc(args: List[ObjectLiteral]): ObjectLiteral = {
+  def lenFunc(args: List[ObjectLiteral]): ObjectLiteral = {
     if (args.length != 1) {
       return ErrorObj("wrong number of arguments, " +
         "got=%d, want=1".format(args.length))
     }
-    val arg = args[0]
+    val arg = args.head
     arg match {
       case value: ArrayObj =>
         IntegerObj(value.elements.length)
@@ -21,71 +21,83 @@ object Builtin {
     }
   }
 
-  private def putsFunc(args: List[ObjectLiteral]): ObjectLiteral = {
+  def putsFunc(args: List[ObjectLiteral]): ObjectLiteral = {
     for (arg <- args) {
       println(arg)
     }
     NullObj()
   }
 
-  private def firstFunc(args: List[ObjectLiteral]): ObjectLiteral = {
+  def firstFunc(args: List[ObjectLiteral]): ObjectLiteral = {
     if (args.length != 1) {
       return ErrorObj("wrong number of arguments, " +
         "got=%d, want=1".format(args.length))
     }
-    val arg = args[0].asInstanceOf[ObjectLiteral]
+    val arg = args.head
     if (arg.objType() != ARRAY_OBJ) {
       return ErrorObj("argument to 'first' must be ARRAY, " +
         "got=%s".format(arg.objType()))
     }
     val arr = arg.asInstanceOf[ArrayObj]
-    arr.elements.head
+    if(arr.elements.nonEmpty){
+      return arr.elements.head
+    }
+    ErrorObj("argument to 'first' must not be empty, " +
+      "got=%s".format(arr.elements.length))
   }
 
-  private def lastFunc(args: List[ObjectLiteral]): ObjectLiteral = {
+  def lastFunc(args: List[ObjectLiteral]): ObjectLiteral = {
     if (args.length != 1) {
       return ErrorObj("wrong number of arguments, " +
         "got=%d, want=1".format(args.length))
     }
-    val arg = args[0].asInstanceOf[ObjectLiteral]
+    val arg = args.head
     if (arg.objType() != ARRAY_OBJ) {
       return ErrorObj("argument to 'last' must be ARRAY, " +
         "got=%s".format(arg.objType()))
     }
     val arr = arg.asInstanceOf[ArrayObj]
-    arr.elements.last
+    if(arr.elements.nonEmpty){
+      return arr.elements.last
+    }
+    ErrorObj("argument to 'last' must not be empty, " +
+      "got=%s".format(arr.elements.length))
   }
 
-  private def restFunc(args: List[ObjectLiteral]): ObjectLiteral = {
+  def restFunc(args: List[ObjectLiteral]): ObjectLiteral = {
     if (args.length != 1) {
       return ErrorObj("wrong number of arguments, " +
         "got=%d, want=1".format(args.length))
     }
-    val arg = args[0].asInstanceOf[ObjectLiteral]
+    val arg = args.head
     if (arg.objType() != ARRAY_OBJ) {
       return ErrorObj("argument to 'rest' must be ARRAY, " +
         "got=%s".format(arg.objType()))
     }
     val arr = arg.asInstanceOf[ArrayObj]
-    ArrayObj(arr.elements.tail)
+    if(arr.elements.nonEmpty){
+      return ArrayObj(arr.elements.tail)
+    }
+    ErrorObj("argument to 'rest' must not be empty, " +
+    "got=%s".format(arr.elements.length))
   }
 
-  private def pushFunc(args: List[ObjectLiteral]): ObjectLiteral = {
+  def pushFunc(args: List[ObjectLiteral]): ObjectLiteral = {
     if (args.length != 2) {
       return ErrorObj("wrong number of arguments, " +
         "got=%d, want=2".format(args.length))
     }
-    val arg = args[0].asInstanceOf[ObjectLiteral]
+    val arg = args.head
     if (arg.objType() != ARRAY_OBJ) {
       return ErrorObj("argument to 'push' must be ARRAY, " +
         "got=%s".format(arg.objType()))
     }
     val arr = arg.asInstanceOf[ArrayObj]
-    ArrayObj(arr.elements.appended(args[1]))
+    ArrayObj(arr.elements.appended(args(1)))
   }
 
   val builtins = List(
-    Builtin(name = "len", builtin = BuiltinObj(fn = letFunc)),
+    Builtin(name = "len", builtin = BuiltinObj(fn = lenFunc)),
     Builtin(name = "puts", builtin = BuiltinObj(fn = putsFunc)),
     Builtin(name = "first", builtin = BuiltinObj(fn = firstFunc)),
     Builtin(name = "last", builtin = BuiltinObj(fn = lastFunc)),
@@ -93,13 +105,12 @@ object Builtin {
     Builtin(name = "push", builtin = BuiltinObj(fn = pushFunc))
   )
 
-  //  // GetBuiltinByName func
-  //  func GetBuiltinByName(name string) *Builtin {
-  //    for _, def := range Builtins {
-  //      if def.Name == name {
-  //        return def.Builtin
-  //      }
-  //    }
-  //    return nil
-  //  }
+  def getBuiltinByName(name: String): BuiltinObj = {
+    for (builtin <- builtins) {
+      if (builtin.name == name) {
+        return builtin.builtin
+      }
+    }
+    null
+  }
 }
