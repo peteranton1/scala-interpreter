@@ -1,427 +1,424 @@
 package com.anton.monkey.compiler
 
-import com.anton.monkey.code.Code.{OpCode, OpNull}
-import com.anton.monkey.code.Instructions
-import com.anton.monkey.objectliteral.ObjectLiteral
+import com.anton.monkey.ast._
+import com.anton.monkey.code.Code._
+import com.anton.monkey.code.{Code, Instructions}
+import com.anton.monkey.compiler.SymbolScope.{BuiltinScope, FreeScope, FunctionScope, GlobalScope, LocalScope}
+import com.anton.monkey.compiler.SymbolTable.{newEnclosedSymbolTable, newSymbolTableWithBuiltins}
+import com.anton.monkey.objectliteral._
+
+import scala.collection.mutable.ListBuffer
 
 
 case class Bytecode(instructions: Instructions,
                     constants: List[ObjectLiteral])
 
-case class EmittedInstruction(opcode: OpCode) {
-  var position: Int = 0
+case class EmittedInstruction(var opcode: OpCode, position: Int)
+
+case class CompilationScope(var instructions: Instructions) {
+  var lastInstruction: EmittedInstruction = EmittedInstruction(OpNull,0)
+  var previousInstruction: EmittedInstruction = EmittedInstruction(OpNull,1)
 }
 
-case class CompilationScope(instruction: Instructions) {
-  var lastInstruction: EmittedInstruction = EmittedInstruction(OpNull)
-  var previousInstruction: EmittedInstruction = EmittedInstruction(OpNull)
-}
 
-
-case class compiler(constants: List[ObjectLiteral],
+case class Compiler(constants: ListBuffer[ObjectLiteral],
                     symbolTable: SymbolTable,
-                    scopes: List[CompilationScope]) {
-  var scopeIndex: Int = 0
+                    scopes: ListBuffer[CompilationScope]) {
 
-  //
-  //  // Compile func
-  //  func (c *Compiler) Compile(node ast.Node) error {
-  //  switch node := node.(type) {
-  //  case *ast.Program:
-  //  for _, s := range node.Statements {
-  //  err := c.Compile(s)
-  //  if err != nil {
-  //  return err
-  //}
-  //}
-  //
-  //  case *ast.ExpressionStatement:
-  //  err := c.Compile(node.Expression)
-  //  if err != nil {
-  //  return err
-  //}
-  //  c.emit(code.OpPop)
-  //
-  //  case *ast.InfixExpression:
-  //  // special treatment for '<' to swap order of operands
-  //  // This is to show how to reuse an existing operator.
-  //  if node.Operator == "<" {
-  //  err := c.Compile(node.Right)
-  //  if err != nil {
-  //  return err
-  //}
-  //  err = c.Compile(node.Left)
-  //  if err != nil {
-  //  return err
-  //}
-  //  c.emit(code.OpGreaterThan)
-  //  return nil
-  //}
-  //  // otherwise order is left then right
-  //  err := c.Compile(node.Left)
-  //  if err != nil {
-  //  return err
-  //}
-  //  err = c.Compile(node.Right)
-  //  if err != nil {
-  //  return err
-  //}
-  //
-  //  switch node.Operator {
-  //  case "+":
-  //  c.emit(code.OpAdd)
-  //  case "-":
-  //  c.emit(code.OpSub)
-  //  case "*":
-  //  c.emit(code.OpMul)
-  //  case "/":
-  //  c.emit(code.OpDiv)
-  //  case ">":
-  //  c.emit(code.OpGreaterThan)
-  //  case "==":
-  //  c.emit(code.OpEqual)
-  //  case "!=":
-  //  c.emit(code.OpNotEqual)
-  //  default:
-  //  return fmt.Errorf("unknown operator %s", node.Operator)
-  //}
-  //
-  //  case *ast.IntegerLiteral:
-  //  integer := &object.Integer{Value: node.Value}
-  //  c.emit(code.OpConstant, c.addConstant(integer))
-  //
-  //  case *ast.Boolean:
-  //  if node.Value {
-  //  c.emit(code.OpTrue)
-  //} else {
-  //  c.emit(code.OpFalse)
-  //}
-  //
-  //  case *ast.PrefixExpression:
-  //  err := c.Compile(node.Right)
-  //  if err != nil {
-  //  return err
-  //}
-  //  switch node.Operator {
-  //  case "!":
-  //  c.emit(code.OpBang)
-  //  case "-":
-  //  c.emit(code.OpMinus)
-  //  default:
-  //  return fmt.Errorf("unknown operator %s", node.Operator)
-  //}
-  //
-  //  case *ast.IfExpression:
-  //  err := c.Compile(node.Condition)
-  //  if err != nil {
-  //  return err
-  //}
-  //
-  //  // Emit an OpJumpNotTruthy with bogus value
-  //  jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 9999)
-  //
-  //  err = c.Compile(node.Consequence)
-  //  if err != nil {
-  //  return err
-  //}
-  //
-  //  if c.lastInstructionIs(code.OpPop) {
-  //  c.removeLastPop()
-  //}
-  //
-  //  // Emit an OpJump with a bogus value
-  //  jumpPos := c.emit(code.OpJump, 9999)
-  //
-  //  afterConsequencePos := len(c.currentInstructions())
-  //  c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
-  //
-  //  if node.Alternative == nil {
-  //  c.emit(code.OpNull)
-  //} else {
-  //  err = c.Compile(node.Alternative)
-  //  if err != nil {
-  //  return err
-  //}
-  //  if c.lastInstructionIs(code.OpPop) {
-  //  c.removeLastPop()
-  //}
-  //}
-  //
-  //  afterAlternativePos := len(c.currentInstructions())
-  //  c.changeOperand(jumpPos, afterAlternativePos)
-  //
-  //  case *ast.BlockStatement:
-  //  for _, s := range node.Statements {
-  //  err := c.Compile(s)
-  //  if err != nil {
-  //  return err
-  //}
-  //}
-  //
-  //  case *ast.LetStatement:
-  //  symbol := c.symbolTable.Define(node.Name.Value)
-  //  err := c.Compile(node.Value)
-  //  if err != nil {
-  //  return err
-  //}
-  //  if symbol.Scope == GlobalScope {
-  //  c.emit(code.OpSetGlobal, symbol.Index)
-  //} else {
-  //  c.emit(code.OpSetLocal, symbol.Index)
-  //}
-  //
-  //  case *ast.Identifier:
-  //  symbol, ok := c.symbolTable.Resolve(node.Value)
-  //  if !ok {
-  //  return fmt.Errorf("undefined variable %s", node.Value)
-  //}
-  //  c.loadSymbol(symbol)
-  //
-  //  case *ast.StringLiteral:
-  //  str := &object.String{Value: node.Value}
-  //  c.emit(code.OpConstant, c.addConstant(str))
-  //
-  //  case *ast.ArrayLiteral:
-  //  for _, el := range node.Elements {
-  //  err := c.Compile(el)
-  //  if err != nil {
-  //  return err
-  //}
-  //}
-  //
-  //  c.emit(code.OpArray, len(node.Elements))
-  //
-  //  case *ast.HashLiteral:
-  //  keys := []ast.Expression{}
-  //  for k := range node.Pairs {
-  //  keys = append(keys, k)
-  //}
-  //  sort.Slice(keys, func(i, j int) bool {
-  //  return keys[i].String() < keys[j].String()
-  //})
-  //  for _, k := range keys {
-  //  err := c.Compile(k)
-  //  if err != nil {
-  //  return err
-  //}
-  //  err = c.Compile(node.Pairs[k])
-  //  if err != nil {
-  //  return err
-  //}
-  //}
-  //  c.emit(code.OpHash, len(node.Pairs)*2)
-  //
-  //  case *ast.IndexExpression:
-  //  err := c.Compile(node.Left)
-  //  if err != nil {
-  //  return err
-  //}
-  //  err = c.Compile(node.Index)
-  //  if err != nil {
-  //  return err
-  //}
-  //  c.emit(code.OpIndex)
-  //
-  //  case *ast.FunctionLiteral:
-  //
-  //  c.enterScope()
-  //  if node.Name != "" {
-  //  c.symbolTable.DefineFunctionName(node.Name)
-  //}
-  //  for _, p := range node.Parameters {
-  //  c.symbolTable.Define(p.Value)
-  //}
-  //
-  //  err := c.Compile(node.Body)
-  //  if err != nil {
-  //  return err
-  //}
-  //
-  //  if c.lastInstructionIs(code.OpPop) {
-  //  c.replaceLastPopWithReturn()
-  //}
-  //  if !c.lastInstructionIs(code.OpReturnValue) {
-  //  c.emit(code.OpReturn)
-  //}
-  //
-  //  freeSymbols := c.symbolTable.FreeSymbols
-  //
-  //  numLocals := c.symbolTable.numDefinitions
-  //  instructions := c.leaveScope()
-  //
-  //  for _, s := range freeSymbols {
-  //  c.loadSymbol(s)
-  //}
-  //
-  //  compiledFn := &object.CompiledFunction{
-  //  Instructions:  instructions,
-  //  NumLocals:     numLocals,
-  //  NumParameters: len(node.Parameters),
-  //}
-  //  fnIndex := c.addConstant(compiledFn)
-  //  c.emit(code.OpClosure, fnIndex, len(freeSymbols))
-  //
-  //  case *ast.ReturnStatement:
-  //  err := c.Compile(node.ReturnValue)
-  //  if err != nil {
-  //  return err
-  //}
-  //  c.emit(code.OpReturnValue)
-  //
-  //  case *ast.CallExpression:
-  //
-  //  err := c.Compile(node.Function)
-  //  if err != nil {
-  //  return err
-  //}
-  //
-  //  for _, a := range node.Arguments {
-  //  err := c.Compile(a)
-  //  if err != nil {
-  //  return err
-  //}
-  //}
-  //  c.emit(code.OpCall, len(node.Arguments))
-  //}
-  //
-  //  return nil
-  //}
-  //
-  //  // Bytecode func
-  //  func (c *Compiler) Bytecode() *Bytecode {
-  //  return &Bytecode{
-  //  Instructions: c.currentInstructions(),
-  //  Constants:    c.constants,
-  //}
-  //}
-  //
-  //  func (c *Compiler) addConstant(obj object.Object) int {
-  //  c.constants = append(c.constants, obj)
-  //  return len(c.constants) - 1
-  //}
-  //
-  //  func (c *Compiler) emit(op code.Opcode, operands ...int) int {
-  //  ins := code.Make(op, operands...)
-  //  pos := c.addInstruction(ins)
-  //
-  //  c.setLastInstruction(op, pos)
-  //
-  //  return pos
-  //}
-  //
-  //  func (c *Compiler) addInstruction(ins []byte) int {
-  //  posNewInstruction := len(c.currentInstructions())
-  //  updatedInstructions := append(c.currentInstructions(), ins...)
-  //  c.scopes[c.scopeIndex].instructions = updatedInstructions
-  //  return posNewInstruction
-  //}
-  //
-  //  func (c *Compiler) setLastInstruction(
-  //  op code.Opcode,
-  //  pos int,
-  //  ) {
-  //  previous := c.scopes[c.scopeIndex].lastInstruction
-  //  last := EmittedInstruction{Opcode: op, Position: pos}
-  //  c.scopes[c.scopeIndex].previousInstruction = previous
-  //  c.scopes[c.scopeIndex].lastInstruction = last
-  //}
-  //
-  //  func (c *Compiler) lastInstructionIs(op code.Opcode) bool {
-  //  if len(c.currentInstructions()) == 0 {
-  //  return false
-  //}
-  //  return c.scopes[c.scopeIndex].lastInstruction.Opcode == op
-  //}
-  //
-  //  func (c *Compiler) removeLastPop() {
-  //  last := c.scopes[c.scopeIndex].lastInstruction
-  //  previous := c.scopes[c.scopeIndex].previousInstruction
-  //  old := c.currentInstructions()
-  //  new := old[:last.Position]
-  //  c.scopes[c.scopeIndex].instructions = new
-  //  c.scopes[c.scopeIndex].lastInstruction = previous
-  //}
-  //
-  //  func (c *Compiler) replaceInstruction(pos int, newInstruction []byte) {
-  //  ins := c.currentInstructions()
-  //  for i := 0; i < len(newInstruction); i++ {
-  //  ins[pos+i] = newInstruction[i]
-  //}
-  //}
-  //
-  //  func (c *Compiler) changeOperand(opPos int, operand int) {
-  //  op := code.Opcode(c.currentInstructions()[opPos])
-  //  newInstruction := code.Make(op, operand)
-  //  c.replaceInstruction(opPos, newInstruction)
-  //}
-  //
-  //  func (c *Compiler) currentInstructions() code.Instructions {
-  //  return c.scopes[c.scopeIndex].instructions
-  //}
-  //
-  //  func (c *Compiler) enterScope() {
-  //  scope := CompilationScope{
-  //  instructions:        code.Instructions{},
-  //  lastInstruction:     EmittedInstruction{},
-  //  previousInstruction: EmittedInstruction{},
-  //}
-  //  c.scopes = append(c.scopes, scope)
-  //  c.scopeIndex++
-  //  c.symbolTable = NewEnclosedSymbolTable(c.symbolTable)
-  //}
-  //
-  //  func (c *Compiler) leaveScope() code.Instructions {
-  //  instructions := c.currentInstructions()
-  //  c.scopes = c.scopes[:len(c.scopes)-1]
-  //  c.scopeIndex--
-  //  c.symbolTable = c.symbolTable.Outer
-  //  return instructions
-  //}
-  //
-  //  func (c *Compiler) replaceLastPopWithReturn() {
-  //  lastPos := c.scopes[c.scopeIndex].lastInstruction.Position
-  //  c.replaceInstruction(lastPos, code.Make(code.OpReturnValue))
-  //  c.scopes[c.scopeIndex].lastInstruction.Opcode = code.OpReturnValue
-  //}
-  //
-  //  func (c *Compiler) loadSymbol(s Symbol) {
-  //  switch s.Scope {
-  //  case GlobalScope:
-  //  c.emit(code.OpGetGlobal, s.Index)
-  //  case LocalScope:
-  //  c.emit(code.OpGetLocal, s.Index)
-  //  case BuiltinScope:
-  //  c.emit(code.OpGetBuiltin, s.Index)
-  //  case FreeScope:
-  //  c.emit(code.OpGetFree, s.Index)
-  //  case FunctionScope:
-  //  c.emit(code.OpCurrentClosure)
-  //}
-  //}
+  var symbolTableVar: SymbolTable = symbolTable
+  var scopeIndex: Int = 0
+  val EmptyArrayInt: Array[Int] = Array()
+
+  def compile(node: Node): String = {
+    node match {
+      case p: Program =>
+        for (s <- p.statements) {
+          val err = compile(s)
+          if (err != null) {
+            return err
+          }
+        }
+
+      case es: ExpressionStatement =>
+        val err = compile(es.expression)
+        if (err != null) {
+          return err
+        }
+        emit(OpPop, EmptyArrayInt)
+
+      case ie: InfixExpression =>
+        // special treatment for '<' to swap order of operands
+        // This is to show how to reuse an existing operator.
+        var err: String = null
+        if (ie.operator == "<") {
+          err = compile(ie.right)
+          if (err != null) {
+            return err
+          }
+          err = compile(ie.left)
+          if (err != null) {
+            return err
+          }
+          emit(OpGreaterThan, EmptyArrayInt)
+          return null
+        }
+        // otherwise order is left then right
+        err = compile(ie.left)
+        if (err != null) {
+          return err
+        }
+        err = compile(ie.right)
+        if (err != null) {
+          return err
+        }
+
+        ie.operator match {
+          case "+" => emit(OpAdd, EmptyArrayInt)
+          case "-" => emit(OpSub, EmptyArrayInt)
+          case "*" => emit(OpMul, EmptyArrayInt)
+          case "/" => emit(OpDiv, EmptyArrayInt)
+          case ">" => emit(OpGreaterThan, EmptyArrayInt)
+          case "==" => emit(OpEqual, EmptyArrayInt)
+          case "!=" => emit(OpNotEqual, EmptyArrayInt)
+          case _ => return "unknown operator %s".format(ie.operator)
+        }
+
+      case il: IntegerLiteral =>
+        val integer = IntegerObj(value = il.value)
+        emit(OpConstant, Array(addConstant(integer)))
+
+      case bl: BooleanObj =>
+        if (bl.value) {
+          emit(OpTrue, EmptyArrayInt)
+        } else {
+          emit(OpFalse, EmptyArrayInt)
+        }
+
+      case pe: PrefixExpression =>
+        val err = compile(pe.right)
+        if (err != null) {
+          return err
+        }
+        pe.operator match {
+          case "!" => emit(OpBang, EmptyArrayInt)
+          case "-" => emit(OpMinus, EmptyArrayInt)
+          case _ => return "unknown operator %s".format(pe.operator)
+        }
+
+      case ie: IfExpression =>
+        var err = compile(ie.condition)
+        if (err != null) {
+          return err
+        }
+
+        // Emit an OpJumpNotTruthy with bogus value
+        val jumpNotTruthyPos = emit(OpJumpNotTruthy, Array(9999))
+
+        err = compile(ie.consequence)
+        if (err != null) {
+          return err
+        }
+
+        if (lastInstructionIs(OpPop)) {
+          removeLastPop()
+        }
+
+        // Emit an OpJump with a bogus value
+        val jumpPos = emit(OpJump, Array(9999))
+
+        val afterConsequencePos = currentInstructions().instructionArray.length - 1
+        changeOperand(jumpNotTruthyPos, afterConsequencePos)
+
+        if (ie.alternative == null) {
+          emit(OpNull, EmptyArrayInt)
+        } else {
+          err = compile(ie.alternative)
+          if (err != null) {
+            return err
+          }
+          if (lastInstructionIs(OpPop)) {
+            removeLastPop()
+          }
+        }
+
+        val afterAlternativePos = currentInstructions().instructionArray.length - 1
+        changeOperand(jumpPos, afterAlternativePos)
+
+      case bs: BlockStatement =>
+        for (s <- bs.statements) {
+          val err = compile(s)
+          if (err != null) {
+            return err
+          }
+        }
+
+      case ls: LetStatement =>
+        val symbol = symbolTable.define(ls.name.value)
+        val err = compile(ls.value)
+        if (err != null) {
+          return err
+        }
+        if (symbol.scope == GlobalScope) {
+          emit(OpSetGlobal, Array(symbol.index))
+        } else {
+          emit(OpSetLocal, Array(symbol.index))
+        }
+
+      case id: Identifier =>
+        val (symbol, ok) = symbolTable.resolve(id.value)
+        if (!ok) {
+          return "undefined variable %s".format(id.value)
+        }
+        loadSymbol(symbol)
+
+      case sl: StringLiteral =>
+        val str = StringObj(value = sl.value)
+        emit(OpConstant, Array(addConstant(str)))
+
+      case al: ArrayLiteral =>
+        for (el <- al.elements) {
+          val err = compile(el)
+          if (err != null) {
+            return err
+          }
+        }
+
+        emit(OpArray, Array(al.elements.length))
+
+      case hl: HashLiteral =>
+        val keys: ListBuffer[Expression] = new ListBuffer()
+        for (pair <- hl.pairs) {
+          keys.append(pair._1)
+        }
+        //      sort.Slice(keys, func(i, j int) bool {
+        //        return keys[i].String() < keys[j].String()
+        //      })
+        for (k <- keys.toList) {
+          var err = compile(k)
+          if (err != null) {
+            return err
+          }
+          val v = hl.pairs.get(k) match {
+            case Some(value) => value
+            case None => return null
+          }
+          err = compile(v)
+          if (err != null) {
+            return err
+          }
+        }
+        emit(OpHash, Array(keys.length * 2))
+
+      case ie: IndexExpression =>
+        var err = compile(ie.left)
+        if (err != null) {
+          return err
+        }
+        err = compile(ie.index)
+        if (err != null) {
+          return err
+        }
+        emit(OpIndex, EmptyArrayInt)
+
+      case fl: FunctionLiteral =>
+
+        enterScope()
+        if (fl.name != "") {
+          symbolTable.defineFunctionName(fl.name)
+        }
+        for (parameter <- fl.parameters) {
+          symbolTable.define(parameter.value)
+        }
+
+        val err = compile(fl.body)
+        if (err != null) {
+          return err
+        }
+
+        if (lastInstructionIs(OpPop)) {
+          replaceLastPopWithReturn()
+        }
+        if (!lastInstructionIs(OpReturnValue)) {
+          emit(OpReturn,EmptyArrayInt)
+        }
+
+        val freeSymbols = symbolTable.freeSymbols
+
+        val numLocals = symbolTable.numDefinitions
+        val instructions = leaveScope()
+
+        for (free <- freeSymbols) {
+          loadSymbol(free)
+        }
+
+        val compiledFn = CompiledFunction(
+          instructions = instructions,
+          numLocals = numLocals,
+          numParameters = fl.parameters.length
+        )
+        val fnIndex = addConstant(compiledFn)
+        emit(OpClosure, Array(fnIndex, freeSymbols.length))
+
+      case rs: ReturnStatement =>
+        val err = compile(rs.returnValue)
+        if (err != null) {
+          return err
+        }
+        emit(OpReturnValue,EmptyArrayInt)
+
+      case cs: CallExpression =>
+
+        val err = compile(cs.function)
+        if (err != null) {
+          return err
+        }
+
+        for (a <- cs.arguments) {
+          val err = compile(a)
+          if (err != null) {
+            return err
+          }
+        }
+        emit(OpCall, Array(cs.arguments.length))
+    }
+
+    null
+  }
+
+
+  def bytecode(): Bytecode = {
+    Bytecode(
+      instructions = currentInstructions(),
+      constants = constants.toList
+    )
+  }
+
+  def addConstant(obj: ObjectLiteral): Int = {
+    constants.appended(obj)
+    constants.length - 1
+  }
+
+  def emit(op: Code.OpCode, operands: Array[Int]): Int = {
+    val ins = Code.make(op, operands)
+    val pos = addInstruction(ins)
+    setLastInstruction(op, pos)
+    pos
+  }
+
+  def addInstruction(ins: Array[Byte]): Int = {
+    val posNewInstruction = currentInstructions()
+      .instructionArray.length
+    val existingInstructions = scopes(scopeIndex)
+      .instructions.instructionArray
+    val updatedInstructions = Array.concat(existingInstructions,ins)
+    scopes(scopeIndex).instructions =
+      Instructions(updatedInstructions)
+    posNewInstruction
+  }
+
+  def setLastInstruction(op: OpCode, pos: Int) {
+    val previous = scopes(scopeIndex).lastInstruction
+    val last = EmittedInstruction(opcode = op, position = pos)
+    scopes(scopeIndex).previousInstruction = previous
+    scopes(scopeIndex).lastInstruction = last
+  }
+
+  def lastInstructionIs(op: OpCode): Boolean = {
+    if (currentInstructions().instructionArray.length == 0) {
+      return false
+    }
+    scopes(scopeIndex).lastInstruction.opcode == op
+  }
+
+  def removeLastPop() {
+    val last = scopes(scopeIndex).lastInstruction
+    val previous = scopes(scopeIndex).previousInstruction
+    val oldIns = currentInstructions().instructionArray
+    val newIns = oldIns.slice(0,last.position)
+    scopes(scopeIndex).instructions = Instructions(newIns)
+    scopes(scopeIndex).lastInstruction = previous
+  }
+
+  def replaceInstruction(pos: Int, newInstruction: Array[Byte]) {
+    val instructions = currentInstructions()
+    var i = 0
+    for (b <- newInstruction) {
+      instructions.instructionArray(pos + i) = b
+      i += 1
+    }
+  }
+
+  def changeOperand(opPos: Int, operand: Int) {
+    val instructions = currentInstructions().instructionArray
+    val op = instructions(opPos)
+    val newInstruction = Code.make(op, Array(operand))
+    replaceInstruction(opPos, newInstruction)
+  }
+
+  def currentInstructions(): Instructions = {
+    scopes(scopeIndex).instructions
+  }
+
+  def enterScope() {
+    val scope = CompilationScope(Instructions(Array()))
+    scopes.append(scope)
+    scopeIndex += 1
+    symbolTableVar = newEnclosedSymbolTable(symbolTable)
+  }
+
+  def leaveScope(): Instructions = {
+    val instructions = currentInstructions()
+    scopes.remove(scopes.length - 1)
+    scopeIndex -= 1
+    symbolTableVar = symbolTableVar.outer
+    instructions
+  }
+
+  def replaceLastPopWithReturn() {
+    val lastPos = scopes(scopeIndex).lastInstruction.position
+    replaceInstruction(lastPos, Code.make(OpReturnValue, EmptyArrayInt))
+    scopes(scopeIndex).lastInstruction.opcode = OpReturnValue
+  }
+
+  def loadSymbol(s: Symbol) {
+    s.scope match {
+      case GlobalScope =>
+        emit(OpGetGlobal, Array(s.index))
+      case LocalScope =>
+        emit(OpGetLocal, Array(s.index))
+      case BuiltinScope =>
+        emit(OpGetBuiltin, Array(s.index))
+      case FreeScope =>
+        emit(OpGetFree, Array(s.index))
+      case FunctionScope =>
+        emit(OpCurrentClosure, Array())
+    }
+  }
 
 }
 
 object Compiler {
-  //  def newCompiler(): Compiler = {
-  //    val mainScope = CompilationScope(Instructions(Array()))
-  //    val symbolTable = newSymbolTable()
-  //    for (builtin <= BuiltinsObjs) {
-  //      symbolTable.DefineBuiltin(i, v.Name)
-  //    }
-  //    Compiler(
-  //        constants =   []object.Object{},
-  //        symbolTable = symbolTable,
-  //        scopes =      []CompilationScope{mainScope},
-  //        scopeIndex =  0,
-  //      )
-  //  }
-  //
-  //    // NewWithState func
-  //    func NewWithState(s *SymbolTable, constants []object.Object) *Compiler {
-  //    compile := New()
-  //    compile.symbolTable = s
-  //    compile.constants = constants
-  //    return compile
-  //  }
-  //
+
+  // New func
+  def newCompiler(): Compiler = {
+    val symbolTable = newSymbolTableWithBuiltins()
+    newWithState(
+      constants = new ListBuffer[ObjectLiteral](),
+      symbolTable = symbolTable
+    )
+  }
+
+  // NewWithState func
+  def newWithState(constants: ListBuffer[ObjectLiteral],
+                   symbolTable: SymbolTable): Compiler = {
+    val mainScope = CompilationScope(
+      instructions = Instructions(Array())
+    )
+    Compiler(
+      constants = constants,
+      symbolTable = symbolTable,
+      scopes = new ListBuffer[CompilationScope].append(mainScope)
+    )
+  }
+
 }

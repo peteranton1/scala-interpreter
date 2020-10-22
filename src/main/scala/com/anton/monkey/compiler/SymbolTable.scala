@@ -1,6 +1,7 @@
 package com.anton.monkey.compiler
 
 import com.anton.monkey.compiler.SymbolScope.{BuiltinScope, FreeScope, GlobalScope, LocalScope}
+import com.anton.monkey.objectliteral.Builtin
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -22,7 +23,7 @@ case class Symbol(name: String, scope: SymbolScope.Value, index: Int)
 case class SymbolTable(outer: SymbolTable,
                        store: mutable.Map[String, Symbol],
                        freeSymbols: ListBuffer[Symbol]) {
-  private var numDefinitions: Int = 0
+  var numDefinitions: Int = 0
 
   def define(name: String): Symbol = {
     val symbol = Symbol(
@@ -93,9 +94,19 @@ object SymbolTable {
     newEnclosedSymbolTable(outer = null)
   }
 
+  def newSymbolTableWithBuiltins(): SymbolTable = {
+    val symbolTable = newEnclosedSymbolTable(outer = null)
+    var i = 0
+    for (builtin <- Builtin.builtins) {
+      symbolTable.defineBuiltin(i, builtin.name)
+      i += 1
+    }
+    symbolTable
+  }
+
   def newEnclosedSymbolTable(outer: SymbolTable): SymbolTable = {
     val store = mutable.Map[String, Symbol]()
     val free = new ListBuffer[Symbol]()
-    new SymbolTable(outer = outer, store = store, freeSymbols = free)
+    SymbolTable(outer = outer, store = store, freeSymbols = free)
   }
 }

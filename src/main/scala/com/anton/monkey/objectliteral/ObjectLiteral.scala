@@ -1,6 +1,7 @@
 package com.anton.monkey.objectliteral
 
 import com.anton.monkey.ast.{BlockStatement, Expression, Identifier}
+import com.anton.monkey.code.Instructions
 import com.anton.monkey.objectliteral.ObjectType._
 
 import scala.collection.mutable
@@ -113,7 +114,11 @@ case class HashObj(pairs: mutable.Map[HashKey, HashPair]) extends ObjectLiteral 
   }
 }
 
-case class CompiledFunction() extends ObjectLiteral {
+case class CompiledFunction(
+                             instructions: Instructions,
+                             numLocals: Int,
+                             numParameters: Int
+                           ) extends ObjectLiteral {
   override def objType(): ObjectType = ???
 
   override def inspect(): String = ???
