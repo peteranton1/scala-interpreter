@@ -7,6 +7,9 @@ import com.anton.monkey.parser.Parser
 import org.scalatest.FunSuite
 
 class CompilerTest extends FunSuite {
+  private val value_0 = 0.toByte
+  private val value_1 = 1.toByte
+  private val value_2 = 2.toByte
 
   case class TestInput(input: String,
                        expectedConstants: Array[Int],
@@ -15,28 +18,74 @@ class CompilerTest extends FunSuite {
   test("Test Integer Arithmetic") {
     val tests = List(
       TestInput("1 + 2", Array(1, 2),
-        Array(Code.OpConstant, 0.toByte, 0.toByte
-          , Code.OpConstant, 0.toByte, 1.toByte
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
           , Code.OpAdd
           , Code.OpPop))
       , TestInput("1 - 2", Array(1, 2),
-        Array(Code.OpConstant, 0.toByte, 0.toByte
-          , Code.OpConstant, 0.toByte, 1.toByte
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
           , Code.OpSub
           , Code.OpPop))
       , TestInput("1 * 2", Array(1, 2),
-        Array(Code.OpConstant, 0.toByte, 0.toByte
-          , Code.OpConstant, 0.toByte, 1.toByte
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
           , Code.OpMul
           , Code.OpPop))
       , TestInput("2 / 1", Array(2, 1),
-        Array(Code.OpConstant, 0.toByte, 0.toByte
-          , Code.OpConstant, 0.toByte, 1.toByte
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
           , Code.OpDiv
           , Code.OpPop))
       , TestInput("- 1", Array(1),
-        Array(Code.OpConstant, 0.toByte, 0.toByte
+        Array(Code.OpConstant, value_0, value_0
           , Code.OpMinus
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Test Boolean Expressions") {
+    val tests = List(
+       TestInput("true", Array(),
+        Array(Code.OpTrue
+          , Code.OpPop))
+      , TestInput("false", Array(),
+        Array(Code.OpFalse
+          , Code.OpPop))
+      , TestInput("1 > 2", Array(1, 2),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpGreaterThan
+          , Code.OpPop))
+      , TestInput("1 < 2", Array(2, 1),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpGreaterThan
+          , Code.OpPop))
+      , TestInput("1 == 2", Array(1, 2),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpEqual
+          , Code.OpPop))
+      , TestInput("1 != 2", Array(1, 2),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpNotEqual
+          , Code.OpPop))
+      , TestInput("true == false", Array(),
+        Array(Code.OpTrue
+          , Code.OpFalse
+          , Code.OpEqual
+          , Code.OpPop))
+      , TestInput("true != false", Array(),
+        Array(Code.OpTrue
+          , Code.OpFalse
+          , Code.OpNotEqual
+          , Code.OpPop))
+      , TestInput("!true", Array(),
+        Array(Code.OpTrue
+          , Code.OpBang
           , Code.OpPop))
     )
     runCompilerTests(tests)
@@ -61,8 +110,8 @@ class CompilerTest extends FunSuite {
                        actual: Instructions) {
     var i = 0
     val actualArray = actual.instructionArray
-    println(s"($input) expected = ${expected.toList}, " +
-      s"actual = ${actualArray.toList} ")
+    println(s"($input) expect = ${expected.toList}, \n" +
+      s"($input) actual = ${actualArray.toList} ")
     while (i < expected.length) {
       val bexpect = expected(i)
       val bactual = actualArray(i)

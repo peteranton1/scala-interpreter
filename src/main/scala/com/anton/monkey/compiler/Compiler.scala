@@ -87,7 +87,7 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
         val integer = IntegerObj(value = il.value)
         emit(OpConstant, Array(addConstant(integer)))
 
-      case bl: BooleanObj =>
+      case bl: BooleanValue =>
         if (bl.value) {
           emit(OpTrue, EmptyArrayInt)
         } else {
