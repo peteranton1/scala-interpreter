@@ -294,7 +294,7 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
   }
 
   def addConstant(obj: ObjectLiteral): Int = {
-    constants.appended(obj)
+    constants += obj
     constants.length - 1
   }
 
