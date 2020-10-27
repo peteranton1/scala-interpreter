@@ -29,7 +29,7 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
   var scopeIndex: Int = 0
   val EmptyArrayInt: Array[Int] = Array()
 
-  def compile(node: Node): String = {
+  def compile(node: Node): String = { 
     node match {
       case p: Program =>
         for (s <- p.statements) {

@@ -1,6 +1,6 @@
 package com.anton.monkey.compiler
 
-import com.anton.monkey.ast.{Node, Program}
+import com.anton.monkey.ast.Program
 import com.anton.monkey.code.{Code, Instructions}
 import com.anton.monkey.lexer.Lexer
 import com.anton.monkey.parser.Parser
@@ -10,6 +10,9 @@ class CompilerTest extends FunSuite {
   private val value_0 = 0.toByte
   private val value_1 = 1.toByte
   private val value_2 = 2.toByte
+  private val value_9 = 9.toByte
+  private val value_10 = 10.toByte
+  private val value_12 = 12.toByte
 
   case class TestInput(input: String,
                        expectedConstants: Array[Int],
@@ -47,7 +50,7 @@ class CompilerTest extends FunSuite {
 
   test("Test Boolean Expressions") {
     val tests = List(
-       TestInput("true", Array(),
+      TestInput("true", Array(),
         Array(Code.OpTrue
           , Code.OpPop))
       , TestInput("false", Array(),
@@ -91,11 +94,59 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
+  test("Test Conditionals") {
+    val tests = List(
+      TestInput("if (true) { 10 }; 3333;", Array(10, 3333),
+        Array(Code.OpTrue
+          , Code.OpJumpNotTruthy, value_0, value_9
+          , Code.OpConstant, value_0, value_0
+          , Code.OpJump, value_0, value_10
+          , Code.OpNull
+          , Code.OpPop
+          , Code.OpConstant, value_0, value_1
+          , Code.OpPop))
+      , TestInput("if (true) { 10 } else { 20 }; 3333;",
+        Array(10, 20, 3333),
+        Array(Code.OpTrue
+          , Code.OpJumpNotTruthy, value_0, value_9
+          , Code.OpConstant, value_0, value_0
+          , Code.OpJump, value_0, value_12
+          , Code.OpConstant, value_0, value_1
+          , Code.OpPop
+          , Code.OpConstant, value_0, value_2
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Test Global Let Statements") {
+    val tests = List(
+      TestInput("let one = 1; let two = 2;", Array(1, 2),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpSetGlobal, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpSetGlobal, value_0, value_1))
+      , TestInput("let one = 1; one;", Array(1),
+          Array(Code.OpConstant, value_0, value_0
+            , Code.OpSetGlobal, value_0, value_0
+            , Code.OpGetGlobal, value_0, value_0
+            , Code.OpPop))
+        , TestInput("let one = 1; let two = one; two;", Array(1),
+          Array(Code.OpConstant, value_0, value_0
+            , Code.OpSetGlobal, value_0, value_0
+            , Code.OpGetGlobal, value_0, value_0
+            , Code.OpSetGlobal, value_0, value_1
+            , Code.OpGetGlobal, value_0, value_1
+            , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
   def runCompilerTests(tests: List[TestInput]) {
     for (tt <- tests) {
       val program = parse(tt.input)
       val compiler = Compiler.newCompiler()
-      val errStr = compiler.compile(program.statements.head)
+      val errStr = compiler.compile(program)
       assert(errStr == null)
       val bytecode = compiler.bytecode()
       testInstructions(
@@ -113,9 +164,9 @@ class CompilerTest extends FunSuite {
     println(s"($input) expect = ${expected.toList}, \n" +
       s"($input) actual = ${actualArray.toList} ")
     while (i < expected.length) {
-      val bexpect = expected(i)
-      val bactual = actualArray(i)
-      assert(bexpect == bactual)
+      val byteExpect = expected(i)
+      val byteActual = actualArray(i)
+      assert(byteExpect == byteActual)
       i += 1
     }
   }

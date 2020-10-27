@@ -18,7 +18,7 @@ trait Expression extends Node {
   def expressionNode(): Unit
 }
 
-case class Program(statements: List[Statement]) {
+case class Program(statements: List[Statement]) extends Node {
   def TokenLiteral(): String = {
     if (statements.nonEmpty) {
       return statements.head.TokenLiteral()
