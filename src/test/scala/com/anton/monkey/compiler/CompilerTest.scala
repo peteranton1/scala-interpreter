@@ -10,6 +10,9 @@ class CompilerTest extends FunSuite {
   private val value_0 = 0.toByte
   private val value_1 = 1.toByte
   private val value_2 = 2.toByte
+  private val value_3 = 3.toByte
+  private val value_4 = 4.toByte
+  private val value_5 = 5.toByte
   private val value_9 = 9.toByte
   private val value_10 = 10.toByte
   private val value_12 = 12.toByte
@@ -127,17 +130,58 @@ class CompilerTest extends FunSuite {
           , Code.OpConstant, value_0, value_1
           , Code.OpSetGlobal, value_0, value_1))
       , TestInput("let one = 1; one;", Array(1),
-          Array(Code.OpConstant, value_0, value_0
-            , Code.OpSetGlobal, value_0, value_0
-            , Code.OpGetGlobal, value_0, value_0
-            , Code.OpPop))
-        , TestInput("let one = 1; let two = one; two;", Array(1),
-          Array(Code.OpConstant, value_0, value_0
-            , Code.OpSetGlobal, value_0, value_0
-            , Code.OpGetGlobal, value_0, value_0
-            , Code.OpSetGlobal, value_0, value_1
-            , Code.OpGetGlobal, value_0, value_1
-            , Code.OpPop))
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpSetGlobal, value_0, value_0
+          , Code.OpGetGlobal, value_0, value_0
+          , Code.OpPop))
+      , TestInput("let one = 1; let two = one; two;", Array(1),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpSetGlobal, value_0, value_0
+          , Code.OpGetGlobal, value_0, value_0
+          , Code.OpSetGlobal, value_0, value_1
+          , Code.OpGetGlobal, value_0, value_1
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Test String Expressions") {
+    val tests = List(
+      TestInput("\"monkey\";", Array(),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpPop))
+      , TestInput("\"mon\" + \"key\";", Array(),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpAdd
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Test Array Literals") {
+    val tests = List(
+      TestInput("[]];", Array(),
+        Array(Code.OpArray, value_0, value_0
+          , Code.OpPop))
+      , TestInput("[1, 2, 3];", Array(1, 2, 3),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpConstant, value_0, value_2
+          , Code.OpArray, value_0, value_3
+          , Code.OpPop))
+      , TestInput("[1 + 2, 3 - 4, 5 * 6];", Array(1, 2, 3, 4, 5, 6),
+        Array(Code.OpConstant, value_0, value_0
+          , Code.OpConstant, value_0, value_1
+          , Code.OpAdd
+          , Code.OpConstant, value_0, value_2
+          , Code.OpConstant, value_0, value_3
+          , Code.OpSub
+          , Code.OpConstant, value_0, value_4
+          , Code.OpConstant, value_0, value_5
+          , Code.OpMul
+          , Code.OpArray, value_0, value_3
+          , Code.OpPop))
     )
     runCompilerTests(tests)
   }

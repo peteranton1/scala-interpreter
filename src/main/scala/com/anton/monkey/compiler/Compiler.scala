@@ -16,8 +16,8 @@ case class Bytecode(instructions: Instructions,
 case class EmittedInstruction(var opcode: OpCode, position: Int)
 
 case class CompilationScope(var instructions: Instructions) {
-  var lastInstruction: EmittedInstruction = EmittedInstruction(OpNull,0)
-  var previousInstruction: EmittedInstruction = EmittedInstruction(OpNull,1)
+  var lastInstruction: EmittedInstruction = EmittedInstruction(OpNull, 0)
+  var previousInstruction: EmittedInstruction = EmittedInstruction(OpNull, 1)
 }
 
 
@@ -29,7 +29,10 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
   var scopeIndex: Int = 0
   val EmptyArrayInt: Array[Int] = Array()
 
-  def compile(node: Node): String = { 
+  def compile(node: Node): String = {
+    if (node == null) {
+      return null
+    }
     node match {
       case p: Program =>
         for (s <- p.statements) {
@@ -239,7 +242,7 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
           replaceLastPopWithReturn()
         }
         if (!lastInstructionIs(OpReturnValue)) {
-          emit(OpReturn,EmptyArrayInt)
+          emit(OpReturn, EmptyArrayInt)
         }
 
         val freeSymbols = symbolTable.freeSymbols
@@ -264,7 +267,7 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
         if (err != null) {
           return err
         }
-        emit(OpReturnValue,EmptyArrayInt)
+        emit(OpReturnValue, EmptyArrayInt)
 
       case cs: CallExpression =>
 
@@ -310,7 +313,7 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
       .instructionArray.length
     val existingInstructions = scopes(scopeIndex)
       .instructions.instructionArray
-    val updatedInstructions = Array.concat(existingInstructions,ins)
+    val updatedInstructions = Array.concat(existingInstructions, ins)
     scopes(scopeIndex).instructions =
       Instructions(updatedInstructions)
     posNewInstruction
@@ -334,7 +337,7 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
     val last = scopes(scopeIndex).lastInstruction
     val previous = scopes(scopeIndex).previousInstruction
     val oldIns = currentInstructions().instructionArray
-    val newIns = oldIns.slice(0,last.position)
+    val newIns = oldIns.slice(0, last.position)
     scopes(scopeIndex).instructions = Instructions(newIns)
     scopes(scopeIndex).lastInstruction = previous
   }
