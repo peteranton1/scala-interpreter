@@ -14,6 +14,7 @@ trait ObjectLiteral {
   def inspect(): String
 }
 
+
 case class IntegerObj(value: Int) extends ObjectLiteral with Hashable {
   override def objType(): ObjectType = INTEGER_OBJ
 
@@ -119,9 +120,9 @@ case class CompiledFunction(
                              numLocals: Int,
                              numParameters: Int
                            ) extends ObjectLiteral {
-  override def objType(): ObjectType = ???
+  override def objType(): ObjectType = COMPILED_FUNCTION_OBJ
 
-  override def inspect(): String = ???
+  override def inspect(): String = s"CompiledFunction[$instructions]"
 }
 
 object ObjectType {

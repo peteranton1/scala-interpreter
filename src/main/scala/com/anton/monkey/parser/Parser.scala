@@ -72,6 +72,7 @@ class Parser(l: Lexer) {
     var statements = new ListBuffer[Statement]
     while (curToken.tokenType != Token.EOF) {
       statements += parseStatement()
+      nextToken()
     }
     Program(statements.toList)
   }
@@ -103,7 +104,6 @@ class Parser(l: Lexer) {
     if (peekTokenIs(Token.SEMICOLON)) {
       nextToken()
     }
-    nextToken()
     LetStatement(token, ident, value)
   }
 
@@ -124,24 +124,19 @@ class Parser(l: Lexer) {
     if (peekTokenIs(Token.SEMICOLON)) {
       nextToken()
     }
-    nextToken()
+    //nextToken()
     ExpressionStatement(token, expr)
   }
 
   def parseExpression(precedence: Int): Expression = {
     val prefix = Try(prefixParserFns(curToken.tokenType))
-    val failed = prefix match {
-      case Success(value) => false
+    val leftFn = prefix match {
+      case Success(v) => v
       case Failure(exception) =>
         noPrefixParseFnError(curToken.tokenType)
-        true
+        return null
     }
-    if (failed) {
-      return null
-    }
-
-    val function = prefix.get()
-    var leftExpr = function
+    var leftExpr = leftFn.apply()
     while (
       !peekTokenIs(Token.SEMICOLON) &&
         !peekTokenIs(Token.RPAREN) &&
@@ -305,14 +300,13 @@ class Parser(l: Lexer) {
   def parseBlockStatement(): BlockStatement = {
     val token = curToken
     var statements = new ListBuffer[Statement]
+    nextToken()
     while (!curTokenIs(Token.RBRACE) && !curTokenIs(Token.EOF)) {
-      nextToken()
-      if(!curTokenIs(Token.RBRACE)) {
-        val stmt = parseStatement()
-        if (stmt != null) {
-          statements += stmt
-        }
+      val stmt = parseStatement()
+      if (stmt != null) {
+        statements += stmt
       }
+      nextToken()
     }
     BlockStatement(token, statements.toList)
   }

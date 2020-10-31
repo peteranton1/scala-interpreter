@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import scala.util.control.Breaks.break
 
 case class Instructions(instructionArray: Array[Byte]) {
-  def String(): String = {
+  override def toString(): String = {
     val buf = new StringBuilder
     var bp = 0
     while (bp < instructionArray.length) {

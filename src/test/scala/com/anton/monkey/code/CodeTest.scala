@@ -135,7 +135,7 @@ class CodeTest extends FunSuite {
       "0003 OpConstant 2\n" +
       "0006 OpConstant 65535\n" +
       "0009 OpClosure 65535 255\n"
-    val actual = instructions.String()
+    val actual = instructions.toString()
     assert(actual == expected)
   }
 

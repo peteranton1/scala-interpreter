@@ -1,50 +1,63 @@
 package com.anton.monkey.compiler
 
-import com.anton.monkey.ast.Program
+import com.anton.monkey.ast.{BlockStatement, ExpressionStatement, InfixExpression, IntegerLiteral, Program}
 import com.anton.monkey.code.{Code, Instructions}
 import com.anton.monkey.lexer.Lexer
+import com.anton.monkey.objectliteral.{CompiledFunction, Environment, FunctionObj, IntegerObj, ObjectLiteral, StringObj}
 import com.anton.monkey.parser.Parser
+import com.anton.monkey.token.Token
 import org.scalatest.FunSuite
 
 class CompilerTest extends FunSuite {
-  private val value_0 = 0.toByte
-  private val value_1 = 1.toByte
-  private val value_2 = 2.toByte
-  private val value_3 = 3.toByte
-  private val value_4 = 4.toByte
-  private val value_5 = 5.toByte
-  private val value_9 = 9.toByte
-  private val value_10 = 10.toByte
-  private val value_12 = 12.toByte
+  private val byte_0 = 0.toByte
+  private val byte_1 = 1.toByte
+  private val byte_2 = 2.toByte
+  private val byte_3 = 3.toByte
+  private val byte_4 = 4.toByte
+  private val byte_5 = 5.toByte
+  private val byte_6 = 6.toByte
+  private val byte_9 = 9.toByte
+  private val byte_10 = 10.toByte
+  private val byte_11 = 11.toByte
+  private val byte_12 = 12.toByte
+  private val int_1 = IntegerObj(1)
+  private val int_2 = IntegerObj(2)
+  private val int_3 = IntegerObj(3)
+  private val int_4 = IntegerObj(4)
+  private val int_5 = IntegerObj(5)
+  private val int_6 = IntegerObj(6)
+  private val int_10 = IntegerObj(10)
+  private val int_20 = IntegerObj(20)
+  private val int_3333 = IntegerObj(3333)
 
   case class TestInput(input: String,
-                       expectedConstants: Array[Int],
+                       expectedConstants: List[ObjectLiteral],
                        expectedInstructions: Array[Byte])
 
   test("Test Integer Arithmetic") {
     val tests = List(
-      TestInput("1 + 2", Array(1, 2),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      TestInput("1 + 2", List(int_1, int_2),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpAdd
           , Code.OpPop))
-      , TestInput("1 - 2", Array(1, 2),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("1 - 2", List(int_1, int_2),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpSub
           , Code.OpPop))
-      , TestInput("1 * 2", Array(1, 2),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("1 * 2", List(int_1, int_2),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpMul
           , Code.OpPop))
-      , TestInput("2 / 1", Array(2, 1),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("2 / 1", List(int_2, int_1),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpDiv
           , Code.OpPop))
-      , TestInput("- 1", Array(1),
-        Array(Code.OpConstant, value_0, value_0
+      , TestInput("- 1", List(int_1),
+        Array(Code.OpConstant, byte_0, byte_0
           , Code.OpMinus
           , Code.OpPop))
     )
@@ -53,43 +66,43 @@ class CompilerTest extends FunSuite {
 
   test("Test Boolean Expressions") {
     val tests = List(
-      TestInput("true", Array(),
+      TestInput("true", List(),
         Array(Code.OpTrue
           , Code.OpPop))
-      , TestInput("false", Array(),
+      , TestInput("false", List(),
         Array(Code.OpFalse
           , Code.OpPop))
-      , TestInput("1 > 2", Array(1, 2),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("1 > 2", List(int_1, int_2),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpGreaterThan
           , Code.OpPop))
-      , TestInput("1 < 2", Array(2, 1),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("1 < 2", List(int_2, int_1),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpGreaterThan
           , Code.OpPop))
-      , TestInput("1 == 2", Array(1, 2),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("1 == 2", List(int_1, int_2),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpEqual
           , Code.OpPop))
-      , TestInput("1 != 2", Array(1, 2),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("1 != 2", List(int_1, int_2),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpNotEqual
           , Code.OpPop))
-      , TestInput("true == false", Array(),
+      , TestInput("true == false", List(),
         Array(Code.OpTrue
           , Code.OpFalse
           , Code.OpEqual
           , Code.OpPop))
-      , TestInput("true != false", Array(),
+      , TestInput("true != false", List(),
         Array(Code.OpTrue
           , Code.OpFalse
           , Code.OpNotEqual
           , Code.OpPop))
-      , TestInput("!true", Array(),
+      , TestInput("!true", List(),
         Array(Code.OpTrue
           , Code.OpBang
           , Code.OpPop))
@@ -99,24 +112,24 @@ class CompilerTest extends FunSuite {
 
   test("Test Conditionals") {
     val tests = List(
-      TestInput("if (true) { 10 }; 3333;", Array(10, 3333),
+      TestInput("if (true) { 10 }; 3333;", List(int_10, int_3333),
         Array(Code.OpTrue
-          , Code.OpJumpNotTruthy, value_0, value_9
-          , Code.OpConstant, value_0, value_0
-          , Code.OpJump, value_0, value_10
+          , Code.OpJumpNotTruthy, byte_0, byte_9
+          , Code.OpConstant, byte_0, byte_0
+          , Code.OpJump, byte_0, byte_10
           , Code.OpNull
           , Code.OpPop
-          , Code.OpConstant, value_0, value_1
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpPop))
       , TestInput("if (true) { 10 } else { 20 }; 3333;",
-        Array(10, 20, 3333),
+        List(int_10, int_20, int_3333),
         Array(Code.OpTrue
-          , Code.OpJumpNotTruthy, value_0, value_9
-          , Code.OpConstant, value_0, value_0
-          , Code.OpJump, value_0, value_12
-          , Code.OpConstant, value_0, value_1
+          , Code.OpJumpNotTruthy, byte_0, byte_9
+          , Code.OpConstant, byte_0, byte_0
+          , Code.OpJump, byte_0, byte_12
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpPop
-          , Code.OpConstant, value_0, value_2
+          , Code.OpConstant, byte_0, byte_2
           , Code.OpPop))
     )
     runCompilerTests(tests)
@@ -124,22 +137,22 @@ class CompilerTest extends FunSuite {
 
   test("Test Global Let Statements") {
     val tests = List(
-      TestInput("let one = 1; let two = 2;", Array(1, 2),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpSetGlobal, value_0, value_0
-          , Code.OpConstant, value_0, value_1
-          , Code.OpSetGlobal, value_0, value_1))
-      , TestInput("let one = 1; one;", Array(1),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpSetGlobal, value_0, value_0
-          , Code.OpGetGlobal, value_0, value_0
+      TestInput("let one = 1; let two = 2;", List(int_1, int_2),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpSetGlobal, byte_0, byte_1))
+      , TestInput("let one = 1; one;", List(int_1),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpGetGlobal, byte_0, byte_0
           , Code.OpPop))
-      , TestInput("let one = 1; let two = one; two;", Array(1),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpSetGlobal, value_0, value_0
-          , Code.OpGetGlobal, value_0, value_0
-          , Code.OpSetGlobal, value_0, value_1
-          , Code.OpGetGlobal, value_0, value_1
+      , TestInput("let one = 1; let two = one; two;", List(int_1),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpGetGlobal, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_1
+          , Code.OpGetGlobal, byte_0, byte_1
           , Code.OpPop))
     )
     runCompilerTests(tests)
@@ -147,12 +160,13 @@ class CompilerTest extends FunSuite {
 
   test("Test String Expressions") {
     val tests = List(
-      TestInput("\"monkey\";", Array(),
-        Array(Code.OpConstant, value_0, value_0
+      TestInput("\"monkey\";", List(StringObj("monkey")),
+        Array(Code.OpConstant, byte_0, byte_0
           , Code.OpPop))
-      , TestInput("\"mon\" + \"key\";", Array(),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("\"mon\" + \"key\";",
+        List(StringObj("mon"),StringObj("key")),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpAdd
           , Code.OpPop))
     )
@@ -161,26 +175,121 @@ class CompilerTest extends FunSuite {
 
   test("Test Array Literals") {
     val tests = List(
-      TestInput("[]];", Array(),
-        Array(Code.OpArray, value_0, value_0
+      TestInput("[];", List(),
+        Array(Code.OpArray, byte_0, byte_0
           , Code.OpPop))
-      , TestInput("[1, 2, 3];", Array(1, 2, 3),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
-          , Code.OpConstant, value_0, value_2
-          , Code.OpArray, value_0, value_3
+      , TestInput("[1, 2, 3];", List(int_1, int_2, int_3),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpArray, byte_0, byte_3
           , Code.OpPop))
-      , TestInput("[1 + 2, 3 - 4, 5 * 6];", Array(1, 2, 3, 4, 5, 6),
-        Array(Code.OpConstant, value_0, value_0
-          , Code.OpConstant, value_0, value_1
+      , TestInput("[1 + 2, 3 - 4, 5 * 6];",
+        List(int_1, int_2, int_3, int_4, int_5, int_6),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
           , Code.OpAdd
-          , Code.OpConstant, value_0, value_2
-          , Code.OpConstant, value_0, value_3
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpConstant, byte_0, byte_3
           , Code.OpSub
-          , Code.OpConstant, value_0, value_4
-          , Code.OpConstant, value_0, value_5
+          , Code.OpConstant, byte_0, byte_4
+          , Code.OpConstant, byte_0, byte_5
           , Code.OpMul
-          , Code.OpArray, value_0, value_3
+          , Code.OpArray, byte_0, byte_3
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Test Hash Literals") {
+    val tests = List(
+      TestInput("{};", List(),
+        Array(Code.OpHash, byte_0, byte_0
+          , Code.OpPop))
+      , TestInput("{1: 2, 3: 4, 5: 6};",
+        List(int_1, int_2, int_3, int_4, int_5, int_6),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpConstant, byte_0, byte_3
+          , Code.OpConstant, byte_0, byte_4
+          , Code.OpConstant, byte_0, byte_5
+          , Code.OpHash, byte_0, byte_6
+          , Code.OpPop))
+      , TestInput("{1: 2 + 3, 4: 5 * 6};",
+        List(int_1, int_2, int_3, int_4, int_5, int_6),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpAdd
+          , Code.OpConstant, byte_0, byte_3
+          , Code.OpConstant, byte_0, byte_4
+          , Code.OpConstant, byte_0, byte_5
+          , Code.OpMul
+          , Code.OpHash, byte_0, byte_4
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Test Index Expressions") {
+    val tests = List(
+      TestInput("[1, 2, 3][1+1];",
+        List(int_1, int_2, int_3, int_1, int_1),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpArray, byte_0, byte_3
+          , Code.OpConstant, byte_0, byte_3
+          , Code.OpConstant, byte_0, byte_4
+          , Code.OpAdd
+          , Code.OpIndex
+          , Code.OpPop))
+      , TestInput("{1: 2}[2 - 1];",
+        List(int_1, int_2, int_2, int_1),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpHash, byte_0, byte_2
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpConstant, byte_0, byte_3
+          , Code.OpSub
+          , Code.OpIndex
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Test Functions") {
+    val tests = List(
+      TestInput("fn() { return 5 + 10 }",
+        List(int_5, int_10, CompiledFunction(Instructions(
+          Array(Code.OpConstant, byte_0, byte_0
+            , Code.OpConstant, byte_0, byte_1
+            , Code.OpAdd
+            , Code.OpReturnValue
+          )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_2, byte_0
+          , Code.OpPop))
+      , TestInput("fn() { 5 + 10 }",
+        List(int_5, int_10, CompiledFunction(Instructions(
+          Array(Code.OpConstant, byte_0, byte_0
+            , Code.OpConstant, byte_0, byte_1
+            , Code.OpAdd
+            , Code.OpReturnValue
+          )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_2, byte_0
+          , Code.OpPop))
+      ,
+      TestInput("fn() { 1; 2 }",
+        List(int_1
+          , int_2
+          , CompiledFunction(Instructions(
+          Array(Code.OpConstant, byte_0, byte_0
+            , Code.OpPop
+            , Code.OpConstant, byte_0, byte_1
+            , Code.OpReturnValue
+          )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_2, byte_0
           , Code.OpPop))
     )
     runCompilerTests(tests)
@@ -197,6 +306,10 @@ class CompilerTest extends FunSuite {
         tt.input
         , tt.expectedInstructions
         , bytecode.instructions)
+      testConstants(
+        tt.input
+        , tt.expectedConstants
+        , bytecode.constants)
     }
   }
 
@@ -205,12 +318,28 @@ class CompilerTest extends FunSuite {
                        actual: Instructions) {
     var i = 0
     val actualArray = actual.instructionArray
-    println(s"($input) expect = ${expected.toList}, \n" +
-      s"($input) actual = ${actualArray.toList} ")
+    println(
+      s"Instructions ($input) expect = ${expected.toList}, \n" +
+        s"             ($input) actual = ${actualArray.toList} ")
     while (i < expected.length) {
       val byteExpect = expected(i)
       val byteActual = actualArray(i)
       assert(byteExpect == byteActual)
+      i += 1
+    }
+  }
+
+  def testConstants(input: String,
+                    expected: List[ObjectLiteral],
+                    actual: List[ObjectLiteral]) {
+    var i = 0
+    println(
+      s"Constants ($input) expect = \n${expected}, \n" +
+        s"          ($input) actual = \n${actual} ")
+    while (i < expected.length) {
+      val valueExpect = expected(i)
+      val valueActual = actual(i)
+      assert(valueExpect.inspect() === valueActual.inspect())
       i += 1
     }
   }
@@ -229,7 +358,7 @@ class CompilerTest extends FunSuite {
           , Code.putUint8(255)
           , Code.putUint8(254)
         ))
-      , TestInput(Code.OpAdd, Array(),
+      , TestInput(Code.OpAdd, List(),
         Array(
           Code.putUint8(Code.OpAdd)
         ))
