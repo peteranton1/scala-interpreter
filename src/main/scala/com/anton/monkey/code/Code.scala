@@ -2,18 +2,15 @@ package com.anton.monkey.code
 
 import java.nio.ByteBuffer
 
-import scala.util.control.Breaks.break
-
 case class Instructions(instructionArray: Array[Byte]) {
   override def toString(): String = {
     val buf = new StringBuilder
     var bp = 0
     while (bp < instructionArray.length) {
       val opCode: Byte = instructionArray(bp)
-      val (defn, err) = Code.lookup(opCode)
+      var (defn,err)= Code.lookup(opCode)
       if (err != null) {
-        buf.append(err)
-        break
+        defn = Definition("0", List())
       }
       bp += 1 // skip opcode
       val (operands, bytesRead) = readOperands(defn, instructionArray, bp)
@@ -206,8 +203,8 @@ object Code {
     OpCall -> Definition("OpCall", List(1)),
     OpReturnValue -> Definition("OpReturnValue", List()),
     OpReturn -> Definition("OpReturn", List()),
-    OpGetLocal -> Definition("OpGetLocal", List(1)),
-    OpSetLocal -> Definition("OpSetLocal", List(1)),
+    OpGetLocal -> Definition("OpGetLocal", List(2)),
+    OpSetLocal -> Definition("OpSetLocal", List(2)),
     OpGetBuiltin -> Definition("OpGetBuiltin", List(1)),
     OpClosure -> Definition("OpClosure", List(2, 1)),
     OpGetFree -> Definition("OpGetFree", List(1)),

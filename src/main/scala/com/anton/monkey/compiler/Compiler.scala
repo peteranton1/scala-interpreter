@@ -22,10 +22,9 @@ case class CompilationScope(var instructions: Instructions) {
 
 
 case class Compiler(constants: ListBuffer[ObjectLiteral],
-                    symbolTable: SymbolTable,
+                    var symbolTable: SymbolTable,
                     scopes: ListBuffer[CompilationScope]) {
 
-  var symbolTableVar: SymbolTable = symbolTable
   var scopeIndex: Int = 0
   val EmptyArrayInt: Array[Int] = Array()
 
@@ -366,14 +365,14 @@ case class Compiler(constants: ListBuffer[ObjectLiteral],
     val scope = CompilationScope(Instructions(Array()))
     scopes.append(scope)
     scopeIndex += 1
-    symbolTableVar = newEnclosedSymbolTable(symbolTable)
+    symbolTable = newEnclosedSymbolTable(symbolTable)
   }
 
   def leaveScope(): Instructions = {
     val instructions = currentInstructions()
     scopes.remove(scopes.length - 1)
     scopeIndex -= 1
-    symbolTableVar = symbolTableVar.outer
+    symbolTable = symbolTable.outer
     instructions
   }
 

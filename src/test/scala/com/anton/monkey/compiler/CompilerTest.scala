@@ -1,11 +1,10 @@
 package com.anton.monkey.compiler
 
-import com.anton.monkey.ast.{BlockStatement, ExpressionStatement, InfixExpression, IntegerLiteral, Program}
+import com.anton.monkey.ast.Program
 import com.anton.monkey.code.{Code, Instructions}
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{CompiledFunction, Environment, FunctionObj, IntegerObj, ObjectLiteral, StringObj}
+import com.anton.monkey.objectliteral.{CompiledFunction, IntegerObj, ObjectLiteral, StringObj}
 import com.anton.monkey.parser.Parser
-import com.anton.monkey.token.Token
 import org.scalatest.FunSuite
 
 class CompilerTest extends FunSuite {
@@ -28,13 +27,14 @@ class CompilerTest extends FunSuite {
   private val int_6 = IntegerObj(6)
   private val int_10 = IntegerObj(10)
   private val int_20 = IntegerObj(20)
+  private val int_24 = IntegerObj(24)
   private val int_3333 = IntegerObj(3333)
 
   case class TestInput(input: String,
                        expectedConstants: List[ObjectLiteral],
                        expectedInstructions: Array[Byte])
 
-  test("Test Integer Arithmetic") {
+  test("Integer Arithmetic") {
     val tests = List(
       TestInput("1 + 2", List(int_1, int_2),
         Array(Code.OpConstant, byte_0, byte_0
@@ -64,7 +64,7 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test Boolean Expressions") {
+  test("Boolean Expressions") {
     val tests = List(
       TestInput("true", List(),
         Array(Code.OpTrue
@@ -110,7 +110,7 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test Conditionals") {
+  test("Conditionals") {
     val tests = List(
       TestInput("if (true) { 10 }; 3333;", List(int_10, int_3333),
         Array(Code.OpTrue
@@ -135,7 +135,7 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test Global Let Statements") {
+  test("Global Let Statements") {
     val tests = List(
       TestInput("let one = 1; let two = 2;", List(int_1, int_2),
         Array(Code.OpConstant, byte_0, byte_0
@@ -158,13 +158,13 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test String Expressions") {
+  test("String Expressions") {
     val tests = List(
       TestInput("\"monkey\";", List(StringObj("monkey")),
         Array(Code.OpConstant, byte_0, byte_0
           , Code.OpPop))
       , TestInput("\"mon\" + \"key\";",
-        List(StringObj("mon"),StringObj("key")),
+        List(StringObj("mon"), StringObj("key")),
         Array(Code.OpConstant, byte_0, byte_0
           , Code.OpConstant, byte_0, byte_1
           , Code.OpAdd
@@ -173,7 +173,7 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test Array Literals") {
+  test("Array Literals") {
     val tests = List(
       TestInput("[];", List(),
         Array(Code.OpArray, byte_0, byte_0
@@ -201,7 +201,7 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test Hash Literals") {
+  test("Hash Literals") {
     val tests = List(
       TestInput("{};", List(),
         Array(Code.OpHash, byte_0, byte_0
@@ -232,7 +232,7 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test Index Expressions") {
+  test("Index Expressions") {
     val tests = List(
       TestInput("[1, 2, 3][1+1];",
         List(int_1, int_2, int_3, int_1, int_1),
@@ -259,7 +259,7 @@ class CompilerTest extends FunSuite {
     runCompilerTests(tests)
   }
 
-  test("Test Functions") {
+  test("Functions") {
     val tests = List(
       TestInput("fn() { return 5 + 10 }",
         List(int_5, int_10, CompiledFunction(Instructions(
@@ -284,12 +284,82 @@ class CompilerTest extends FunSuite {
         List(int_1
           , int_2
           , CompiledFunction(Instructions(
-          Array(Code.OpConstant, byte_0, byte_0
-            , Code.OpPop
-            , Code.OpConstant, byte_0, byte_1
-            , Code.OpReturnValue
-          )), 0, 0)),
+            Array(Code.OpConstant, byte_0, byte_0
+              , Code.OpPop
+              , Code.OpConstant, byte_0, byte_1
+              , Code.OpReturnValue
+            )), 0, 0)),
         Array(Code.OpClosure, byte_0, byte_2, byte_0
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Functions Without Return Value") {
+    val tests = List(
+      TestInput("fn() { }",
+        List(CompiledFunction(Instructions(
+          Array(Code.OpReturn)), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_0, byte_0
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Function Calls") {
+    val tests = List(
+      TestInput("fn() { 24 }();",
+        List(int_24
+          , CompiledFunction(Instructions(
+            Array(Code.OpConstant, byte_0, byte_0
+              , Code.OpReturnValue
+            )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_1, byte_0
+          , Code.OpCall, byte_0
+          , Code.OpPop))
+      , TestInput("let noArg = fn() { 24 }; noArg(); ",
+        List(int_24
+          , CompiledFunction(Instructions(
+            Array(Code.OpConstant, byte_0, byte_0
+              , Code.OpReturnValue
+            )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_1, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpGetGlobal, byte_0, byte_0
+          , Code.OpCall, byte_0
+          , Code.OpPop))
+       , TestInput("let oneArg = fn(a) { a }; oneArg(24); ",
+        List(CompiledFunction(Instructions(
+            Array(Code.OpGetLocal, byte_0, byte_0
+              , Code.OpReturnValue
+            )), 0, 0)
+          ,int_24
+          ),
+        Array(Code.OpClosure, byte_0, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpGetGlobal, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpCall, byte_1
+          , Code.OpPop))
+       , TestInput("let manyArg = fn(a, b, c) { a; b; c }; " +
+        "manyArg(24, 25, 26);",
+        List(CompiledFunction(Instructions(
+            Array(Code.OpGetLocal, byte_0, byte_0
+              , Code.OpPop
+              , Code.OpGetLocal, byte_0, byte_1
+              , Code.OpPop
+              , Code.OpGetLocal, byte_0, byte_2
+              , Code.OpReturnValue
+            )), 0, 0)
+          ,int_24
+          ),
+        Array(Code.OpClosure, byte_0, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpGetGlobal, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_1
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpConstant, byte_0, byte_3
+          , Code.OpCall, byte_3
           , Code.OpPop))
     )
     runCompilerTests(tests)
@@ -349,37 +419,4 @@ class CompilerTest extends FunSuite {
     val p = Parser.New(l)
     p.parseProgram()
   }
-
-  /*test("should make bytes") {
-    val tests = List(
-      TestInput(Code.OpConstant, Array(65534),
-        Array(
-          Code.putUint8(Code.OpConstant)
-          , Code.putUint8(255)
-          , Code.putUint8(254)
-        ))
-      , TestInput(Code.OpAdd, List(),
-        Array(
-          Code.putUint8(Code.OpAdd)
-        ))
-      , TestInput(Code.OpGetLocal, Array(255),
-        Array(
-          Code.putUint8(Code.OpGetLocal)
-          , Code.putUint8(255)
-        ))
-      , TestInput(Code.OpClosure, Array(65534, 255),
-        Array(
-          Code.putUint8(Code.OpClosure)
-          , Code.putUint8(255)
-          , Code.putUint8(254)
-          , Code.putUint8(255)
-        ))
-    )
-    tests.foreach(input => {
-      val actual = Code.make(input.op, input.operands)
-      //assert(actual sameElements input.expected)
-      assertArray(actual, input.expected)
-    })
-  }*/
-
 }
