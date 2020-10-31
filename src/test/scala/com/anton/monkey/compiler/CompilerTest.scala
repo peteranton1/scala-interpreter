@@ -28,6 +28,10 @@ class CompilerTest extends FunSuite {
   private val int_10 = IntegerObj(10)
   private val int_20 = IntegerObj(20)
   private val int_24 = IntegerObj(24)
+  private val int_55 = IntegerObj(55)
+  private val int_66 = IntegerObj(66)
+  private val int_77 = IntegerObj(77)
+  private val int_88 = IntegerObj(88)
   private val int_3333 = IntegerObj(3333)
 
   case class TestInput(input: String,
@@ -328,31 +332,31 @@ class CompilerTest extends FunSuite {
           , Code.OpGetGlobal, byte_0, byte_0
           , Code.OpCall, byte_0
           , Code.OpPop))
-       , TestInput("let oneArg = fn(a) { a }; oneArg(24); ",
+      , TestInput("let oneArg = fn(a) { a }; oneArg(24); ",
         List(CompiledFunction(Instructions(
-            Array(Code.OpGetLocal, byte_0, byte_0
-              , Code.OpReturnValue
-            )), 0, 0)
-          ,int_24
-          ),
+          Array(Code.OpGetLocal, byte_0, byte_0
+            , Code.OpReturnValue
+          )), 0, 0)
+          , int_24
+        ),
         Array(Code.OpClosure, byte_0, byte_0, byte_0
           , Code.OpSetGlobal, byte_0, byte_0
           , Code.OpGetGlobal, byte_0, byte_0
           , Code.OpConstant, byte_0, byte_1
           , Code.OpCall, byte_1
           , Code.OpPop))
-       , TestInput("let manyArg = fn(a, b, c) { a; b; c }; " +
+      , TestInput("let manyArg = fn(a, b, c) { a; b; c }; " +
         "manyArg(24, 25, 26);",
         List(CompiledFunction(Instructions(
-            Array(Code.OpGetLocal, byte_0, byte_0
-              , Code.OpPop
-              , Code.OpGetLocal, byte_0, byte_1
-              , Code.OpPop
-              , Code.OpGetLocal, byte_0, byte_2
-              , Code.OpReturnValue
-            )), 0, 0)
-          ,int_24
-          ),
+          Array(Code.OpGetLocal, byte_0, byte_0
+            , Code.OpPop
+            , Code.OpGetLocal, byte_0, byte_1
+            , Code.OpPop
+            , Code.OpGetLocal, byte_0, byte_2
+            , Code.OpReturnValue
+          )), 0, 0)
+          , int_24
+        ),
         Array(Code.OpClosure, byte_0, byte_0, byte_0
           , Code.OpSetGlobal, byte_0, byte_0
           , Code.OpGetGlobal, byte_0, byte_0
@@ -361,6 +365,265 @@ class CompilerTest extends FunSuite {
           , Code.OpConstant, byte_0, byte_3
           , Code.OpCall, byte_3
           , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Compiler Scopes") {
+    val EmptyArrayInt: Array[Int] = Array()
+    val compiler = Compiler.newCompiler()
+    assert(compiler.scopeIndex == 0)
+    val globalSymbolTable = compiler.symbolTable
+    compiler.emit(Code.OpMul, EmptyArrayInt)
+
+    compiler.enterScope()
+    assert(compiler.scopeIndex == 1)
+
+    compiler.emit(Code.OpSub, EmptyArrayInt)
+    assert(compiler.scopes(compiler.scopeIndex)
+      .instructions.instructionArray.length == 1)
+
+    var last = compiler.scopes(compiler.scopeIndex).lastInstruction
+    assert(last.opcode == Code.OpSub)
+
+    assert(compiler.symbolTable.outer == globalSymbolTable)
+
+    compiler.leaveScope()
+    assert(compiler.scopeIndex == 0)
+    assert(compiler.symbolTable == globalSymbolTable)
+    assert(compiler.symbolTable.outer == null)
+
+    compiler.emit(Code.OpAdd, EmptyArrayInt)
+    assert(compiler.scopes(compiler.scopeIndex)
+      .instructions.instructionArray.length == 2)
+    last = compiler.scopes(compiler.scopeIndex).lastInstruction
+
+    assert(last.opcode == Code.OpAdd)
+
+    val previous = compiler.scopes(compiler.scopeIndex)
+      .previousInstruction
+    assert(previous.opcode == Code.OpMul)
+  }
+
+  test("Let Statement Scopes") {
+    val tests = List(
+      TestInput("let num = 55; fn() { num }",
+        List(int_55
+          , CompiledFunction(Instructions(
+            Array(Code.OpGetGlobal, byte_0, byte_0
+              , Code.OpReturnValue
+            )), 0, 0)),
+        Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpClosure, byte_0, byte_1, byte_0
+          , Code.OpPop))
+      , TestInput("fn() { let num = 55; num }",
+        List(int_55
+          , CompiledFunction(Instructions(
+            Array(Code.OpConstant, byte_0, byte_0
+              , Code.OpSetLocal, byte_0, byte_0
+              , Code.OpGetLocal, byte_0, byte_0
+              , Code.OpReturnValue
+            )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_1, byte_0
+          , Code.OpPop))
+      , TestInput("fn() { let a = 55; let b = 77; a + b }",
+        List(int_55
+          , int_77
+          , CompiledFunction(Instructions(
+            Array(Code.OpConstant, byte_0, byte_0
+              , Code.OpSetLocal, byte_0, byte_0
+              , Code.OpConstant, byte_0, byte_1
+              , Code.OpSetLocal, byte_0, byte_1
+              , Code.OpGetLocal, byte_0, byte_0
+              , Code.OpGetLocal, byte_0, byte_1
+              , Code.OpAdd
+              , Code.OpReturnValue
+            )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_2, byte_0
+          , Code.OpPop))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Builtins Test") {
+    val tests = List(
+      TestInput("len([]); push([], 1);",
+        List(int_1),
+        Array(Code.OpGetBuiltin, byte_0
+          , Code.OpArray, byte_0, byte_0
+          , Code.OpCall, byte_1
+          , Code.OpPop
+          , Code.OpGetBuiltin, byte_5
+          , Code.OpArray, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_0
+          , Code.OpCall, byte_2
+          , Code.OpPop
+        ))
+      , TestInput("fn() { len([]); } ",
+        List(CompiledFunction(Instructions(
+          Array(Code.OpGetBuiltin, byte_0
+            , Code.OpArray, byte_0, byte_0
+            , Code.OpCall, byte_1
+            , Code.OpReturnValue
+          )), 0, 0)),
+        Array(Code.OpClosure, byte_0, byte_0, byte_0
+          , Code.OpPop
+        ))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Closures Test") {
+    val tests = List(
+      TestInput("fn(a) { fn(b) { a + b } } ",
+        List(CompiledFunction(Instructions(
+          Array(Code.OpGetFree, byte_0
+            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpAdd
+            , Code.OpReturnValue
+          )), 0, 0)
+          , CompiledFunction(Instructions(
+            Array(Code.OpGetLocal, byte_0, byte_0
+              , Code.OpClosure, byte_0, byte_0, byte_1
+              , Code.OpReturnValue
+            )), 0, 0))
+        , Array(Code.OpClosure, byte_0, byte_1, byte_0
+          , Code.OpPop
+        ))
+        , TestInput("fn(a) { fn(b) { fn(c) { a + b + c } } } ",
+        List(CompiledFunction(Instructions(
+          Array(Code.OpGetFree, byte_0
+            , Code.OpGetFree, byte_1
+            , Code.OpAdd
+            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpAdd
+            , Code.OpReturnValue
+          )), 0, 0)
+          , CompiledFunction(Instructions(
+          Array(Code.OpGetFree, byte_0
+            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpClosure, byte_0, byte_0, byte_2
+            , Code.OpReturnValue
+          )), 0, 0)
+          , CompiledFunction(Instructions(
+            Array(Code.OpGetLocal, byte_0, byte_0
+              , Code.OpClosure, byte_0, byte_1, byte_1
+              , Code.OpReturnValue
+            )), 0, 0))
+        , Array(Code.OpClosure, byte_0, byte_2, byte_0
+          , Code.OpPop
+        ))
+        , TestInput("let global = 55;" +
+        "fn() { " +
+        "  let a = 66;" +
+        "  fn() { " +
+        "    let b = 77;" +
+        "    fn() { " +
+        "      let c = 88;" +
+        "      global + a + b + c " +
+        "} } } ",
+        List(
+          int_55
+          , int_66
+          , int_77
+          , int_88
+          , CompiledFunction(Instructions(
+          Array(Code.OpConstant, byte_0, byte_3
+            , Code.OpSetLocal, byte_0, byte_0
+            , Code.OpGetGlobal, byte_0, byte_0
+            , Code.OpGetFree, byte_0
+            , Code.OpAdd
+            , Code.OpGetFree, byte_1
+            , Code.OpAdd
+            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpAdd
+            , Code.OpReturnValue
+          )), 0, 0)
+          , CompiledFunction(Instructions(
+          Array(Code.OpConstant, byte_0, byte_2
+            , Code.OpSetLocal, byte_0, byte_0
+            , Code.OpGetFree, byte_0
+            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpClosure, byte_0, byte_4, byte_2
+            , Code.OpReturnValue
+          )), 0, 0)
+          , CompiledFunction(Instructions(
+            Array(Code.OpConstant, byte_0, byte_1
+              , Code.OpSetLocal, byte_0, byte_0
+              , Code.OpGetLocal, byte_0, byte_0
+              , Code.OpClosure, byte_0, byte_5, byte_1
+              , Code.OpReturnValue
+            )), 0, 0))
+        , Array(Code.OpConstant, byte_0, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpClosure, byte_0, byte_6, byte_0
+          , Code.OpPop
+        ))
+    )
+    runCompilerTests(tests)
+  }
+
+  test("Recursive Functions") {
+    val tests = List(
+      TestInput("let countdown = fn(x) { " +
+        "  countdown(x - 1); " +
+        "} " +
+        "countdown(1);",
+        List(
+          int_1
+          , CompiledFunction(Instructions(
+          Array(Code.OpCurrentClosure
+            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpConstant, byte_0, byte_0
+            , Code.OpSub
+            , Code.OpCall, byte_1
+            , Code.OpReturnValue
+          )), 0, 0)
+          , int_1
+        )
+        , Array(Code.OpClosure, byte_0, byte_1, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpGetGlobal, byte_0, byte_0
+          , Code.OpConstant, byte_0, byte_2
+          , Code.OpCall, byte_1
+          , Code.OpPop
+        ))
+      ,
+      TestInput("" +
+        "let wrapper = fn() { " +
+        "  let countdown = fn(x) { " +
+        "    countdown(x - 1); " +
+        "  } " +
+        "  countdown(1)" +
+        "}; " +
+        "wrapper();",
+        List(
+          int_1
+          , CompiledFunction(Instructions(
+          Array(Code.OpCurrentClosure
+            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpConstant, byte_0, byte_0
+            , Code.OpSub
+            , Code.OpCall, byte_1
+            , Code.OpReturnValue
+          )), 0, 0)
+          , int_1
+          , CompiledFunction(Instructions(
+            Array(Code.OpClosure, byte_0, byte_1, byte_0
+              , Code.OpSetLocal, byte_0, byte_0
+              , Code.OpGetLocal, byte_0, byte_0
+              , Code.OpConstant, byte_0, byte_2
+              , Code.OpCall, byte_1
+              , Code.OpReturnValue
+            )), 1, 0)
+        )
+        , Array(Code.OpClosure, byte_0, byte_3, byte_0
+          , Code.OpSetGlobal, byte_0, byte_0
+          , Code.OpGetGlobal, byte_0, byte_0
+          , Code.OpCall, byte_0
+          , Code.OpPop
+        ))
     )
     runCompilerTests(tests)
   }
