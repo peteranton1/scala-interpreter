@@ -35,6 +35,11 @@ case class BooleanObj(value: Boolean) extends ObjectLiteral with Hashable {
   }
 }
 
+object BooleanObj {
+  val TRUE: BooleanObj = BooleanObj(true)
+  val FALSE: BooleanObj = BooleanObj(false)
+}
+
 case class NullObj() extends ObjectLiteral {
   override def objType(): ObjectType = NULL_OBJ
 
