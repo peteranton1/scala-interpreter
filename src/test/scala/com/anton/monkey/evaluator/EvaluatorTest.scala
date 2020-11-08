@@ -1,11 +1,15 @@
 package com.anton.monkey.evaluator
 
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{BooleanObj, Environment, IntegerObj, NullObj, ObjectLiteral, ReturnValueObj}
+import com.anton.monkey.objectliteral.{BooleanObj, Environment, ErrorObj, IntegerObj, NullObj, ObjectLiteral, ReturnValueObj}
 import com.anton.monkey.parser.Parser
 import org.scalatest.FunSuite
 
 class EvaluatorTest extends FunSuite {
+
+  val NULL_VALUE: Int = -9999
+
+  case class TestStr(input: String, expected: String)
 
   case class TestInt(input: String, expected: Int)
 
@@ -84,8 +88,6 @@ class EvaluatorTest extends FunSuite {
     }
   }
 
-  val NULL_VALUE: Int = -9999
-
   test("If Else Expressions") {
     val tests = List(
       TestInt("if (true) { 10 }", 10)
@@ -131,12 +133,89 @@ class EvaluatorTest extends FunSuite {
     }
   }
 
+  test("Error Handling") {
+    val tests = List(
+      TestStr(
+        "5 + true;",
+        "type mismatch: INTEGER + BOOLEAN"
+      )
+      , TestStr(
+        "5 + true; 5;",
+        "type mismatch: INTEGER + BOOLEAN"
+      )
+      , TestStr(
+        "-true",
+        "unknown operator: -BOOLEAN"
+      )
+      , TestStr(
+        "true + false;",
+        "type mismatch: BOOLEAN + BOOLEAN"
+      )
+      , TestStr(
+        "5; true + false; 5",
+        "type mismatch: BOOLEAN + BOOLEAN"
+      )
+      , TestStr(
+        "if (10 > 1) { true + false; }",
+        "type mismatch: BOOLEAN + BOOLEAN"
+      )
+      , TestStr(
+        "if (10 > 1) { if (10 > 1) { return true + false; } return 1;",
+        "type mismatch: BOOLEAN + BOOLEAN",
+      )
+      , TestStr(
+        "foobar",
+        "identifier not found: foobar"
+      )
+      , TestStr(
+        "\"Hello\" - \"World\"",
+        "unknown operator: STRING - STRING"
+      )
+      , TestStr(
+        "{\"name\": \"Monkey\"}[fn(x){ x }];",
+        "unusable as hash key: FUNCTION"
+      )
+    )
+
+    for (tt <- tests) {
+      printTTStr(tt)
+      val evaluated = testEval(tt.input)
+      testErrorObject(evaluated, tt.expected)
+    }
+  }
+
+  test("Let Statements") {
+    val tests = List(
+      TestInt("let a = 5; a;", 5)
+      , TestInt("let a = 5 * 5; a;", 25)
+      , TestInt("let a = 5; let b = a; b;", 5)
+      , TestInt("let a = 5; let b = a; let c = a + b + 5; c;", 15)
+    )
+
+    for (tt <- tests) {
+      printTTInt(tt)
+      val evaluated = testEval(tt.input)
+      testIntegerObject(evaluated, tt.expected)
+    }
+  }
+
+  def printTTStr(tt: TestStr): Unit = {
+    println(s"input: ${tt.input}, expected: ${tt.expected}")
+  }
+
   def printTTInt(tt: TestInt): Unit = {
     println(s"input: ${tt.input}, expected: ${tt.expected}")
   }
 
   def printTTBool(tt: TestBool): Unit = {
     println(s"input: ${tt.input}, expected: ${tt.expected}")
+  }
+
+  def testErrorObject(obj: ObjectLiteral,
+                        expected: String) {
+    val result = obj.asInstanceOf[ErrorObj]
+    assert(result != null)
+    assert(result.message == expected)
   }
 
   def testBooleanObject(obj: ObjectLiteral,

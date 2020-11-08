@@ -112,10 +112,10 @@ class Evaluator {
 
   def evalLetStatement(ls: LetStatement, env: Environment): ObjectLiteral = {
     val result = eval(ls.value, env)
-    result match {
-      case err: ErrorObj =>
-        return err
+    if(result.isInstanceOf[ErrorObj]) {
+        return result
     }
+    env.set(ls.name.value, result)
     result
   }
 
@@ -184,7 +184,7 @@ class Evaluator {
         left.asInstanceOf[StringObj],
         right.asInstanceOf[StringObj])
     }
-    ErrorObj("unknown operator: %s %s %s"
+    ErrorObj("type mismatch: %s %s %s"
       .format(left.objType(), ie.operator, right.objType()))
   }
 
@@ -219,6 +219,7 @@ class Evaluator {
       case ">" => return evalBooleanValue(leftVal > rightVal)
       case "==" => return evalBooleanValue(leftVal == rightVal)
       case "!=" => return evalBooleanValue(leftVal != rightVal)
+      case _ => null
     }
     ErrorObj("unknown operator: %s %s %s"
       .format(left.objType(), operator, right.objType()))
@@ -231,6 +232,7 @@ class Evaluator {
     val rightVal = right.value
     operator match {
       case "+" => return StringObj(leftVal + rightVal)
+      case _ => null
     }
     ErrorObj("unknown operator: %s %s %s"
       .format(left.objType(), operator, right.objType()))
@@ -357,6 +359,10 @@ class Evaluator {
   def evalHashIndexExpression(hash: ObjectLiteral,
                               index: ObjectLiteral): ObjectLiteral = {
     val hashObject = hash.asInstanceOf[HashObj]
+    if(!index.isInstanceOf[Hashable]) {
+      return ErrorObj("unusable as hash key: %s"
+        .format(index.objType()))
+    }
     val key = index.asInstanceOf[Hashable]
     if (key == null) {
       ErrorObj("Unusable as a hash key: %s"

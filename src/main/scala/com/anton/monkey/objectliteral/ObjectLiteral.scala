@@ -6,7 +6,9 @@ import com.anton.monkey.objectliteral.ObjectType._
 
 import scala.collection.mutable
 
-case class ObjectType(name: String)
+case class ObjectType(name: String) {
+  override def toString: String = name
+}
 
 trait ObjectLiteral {
   def objType(): ObjectType

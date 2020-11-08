@@ -8,6 +8,7 @@ case class Environment(store: mutable.Map[String, ObjectLiteral],
   def get(name: String): (ObjectLiteral, Boolean) = {
     store.get(name) match {
       case Some(value) => return (value, true)
+      case _ => null
     }
     if (outer != null) {
       return outer.get(name)
