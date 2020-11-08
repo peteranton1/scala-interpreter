@@ -23,6 +23,8 @@ case class IntegerObj(value: Int) extends ObjectLiteral with Hashable {
   override def hashKey(): HashKey = {
     HashKey(INTEGER_OBJ, value)
   }
+
+  override def toString: String = inspect()
 }
 
 case class BooleanObj(value: Boolean) extends ObjectLiteral with Hashable {
@@ -43,19 +45,35 @@ object BooleanObj {
 case class NullObj() extends ObjectLiteral {
   override def objType(): ObjectType = NULL_OBJ
 
-  override def inspect(): String = "null"
+  override def inspect(): String = "NullObj"
+
+  override def toString: String = inspect()
+}
+
+object NullObj {
+  val NULL: NullObj = NullObj()
 }
 
 case class ReturnValueObj(value: ObjectLiteral) extends ObjectLiteral {
   override def objType(): ObjectType = RETURN_VALUE_OBJ
 
-  override def inspect(): String = String.format("%s", value)
+  override def inspect(): String = {
+    val buf = new StringBuilder()
+    buf append "returnValue("
+    buf append value.inspect()
+    buf append ")"
+    buf.toString()
+  }
+
+  override def toString: String = inspect()
 }
 
 case class ErrorObj(message: String) extends ObjectLiteral {
   override def objType(): ObjectType = ERROR_OBJ
 
   override def inspect(): String = message
+
+  override def toString: String = inspect()
 }
 
 case class FunctionObj(parameters: List[Identifier],
@@ -72,6 +90,8 @@ case class FunctionObj(parameters: List[Identifier],
     buf append "\n}"
     buf.toString()
   }
+
+  override def toString: String = inspect()
 }
 
 case class StringObj(value: String) extends ObjectLiteral with Hashable {
@@ -80,12 +100,16 @@ case class StringObj(value: String) extends ObjectLiteral with Hashable {
   override def inspect(): String = value
 
   override def hashKey(): HashKey = HashKey(STRING_OBJ, md5HashString(value))
+
+  override def toString: String = inspect()
 }
 
 case class BuiltinObj(fn: List[ObjectLiteral] => ObjectLiteral) extends ObjectLiteral {
   override def objType(): ObjectType = BUILTIN_OBJ
 
   override def inspect(): String = "builtin function"
+
+  override def toString: String = inspect()
 }
 
 case class ArrayObj(elements: List[ObjectLiteral]) extends ObjectLiteral {
@@ -98,6 +122,8 @@ case class ArrayObj(elements: List[ObjectLiteral]) extends ObjectLiteral {
     buf append "]"
     buf.toString()
   }
+
+  override def toString: String = inspect()
 }
 
 trait Hashable {
@@ -118,6 +144,8 @@ case class HashObj(pairs: mutable.Map[HashKey, HashPair]) extends ObjectLiteral 
     buf append "}"
     buf.toString()
   }
+
+  override def toString: String = inspect()
 }
 
 case class CompiledFunction(

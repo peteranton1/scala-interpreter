@@ -71,7 +71,10 @@ class Parser(l: Lexer) {
   def parseProgram(): Program = {
     var statements = new ListBuffer[Statement]
     while (curToken.tokenType != Token.EOF) {
-      statements += parseStatement()
+      val stmt = parseStatement()
+      if(stmt != null){
+        statements += stmt
+      }
       nextToken()
     }
     Program(statements.toList)
@@ -114,7 +117,6 @@ class Parser(l: Lexer) {
     if (peekTokenIs(Token.SEMICOLON)) {
       nextToken()
     }
-    nextToken()
     ReturnStatement(token, returnValue)
   }
 
