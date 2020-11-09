@@ -141,7 +141,8 @@ case class BlockStatement(token: Token, statements: List[Statement]) extends Sta
 
   override def TokenLiteral(): String = token.literal
 
-  override def String(): String = "{ " + statements.map(_.String()).mkString(" ") + " }"
+  override def String(): String =
+    statements.map(_.String()).mkString(" ")
 }
 
 case class FunctionLiteral(token: Token, parameters: List[Identifier],

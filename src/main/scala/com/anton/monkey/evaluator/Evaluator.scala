@@ -301,9 +301,10 @@ class Evaluator {
   }
 
   def unwrapReturnValue(obj: ObjectLiteral): ObjectLiteral = {
-    val result = obj.asInstanceOf[ReturnValueObj]
-    if (result != null) {
-      return result.value
+    obj match {
+      case result: ReturnValueObj =>
+        return result.value
+      case _ =>
     }
     obj
   }

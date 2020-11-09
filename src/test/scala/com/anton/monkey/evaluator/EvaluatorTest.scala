@@ -1,7 +1,8 @@
 package com.anton.monkey.evaluator
 
+import com.anton.monkey.ast.StringLiteral
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{BooleanObj, Environment, ErrorObj, IntegerObj, NullObj, ObjectLiteral, ReturnValueObj}
+import com.anton.monkey.objectliteral.{BooleanObj, Environment, ErrorObj, FunctionObj, IntegerObj, NullObj, ObjectLiteral, ReturnValueObj, StringObj}
 import com.anton.monkey.parser.Parser
 import org.scalatest.FunSuite
 
@@ -199,6 +200,88 @@ class EvaluatorTest extends FunSuite {
     }
   }
 
+  test("Function Object") {
+    val input = "fn(x) { x + 2; };"
+
+    val evaluated = testEval(input)
+    assert(evaluated.isInstanceOf[FunctionObj])
+    val fn = evaluated.asInstanceOf[FunctionObj]
+    assert(fn.parameters.length == 1)
+    assert(fn.parameters.head.String() == "x")
+    assert(fn.body.String() == "(x + 2)")
+  }
+
+  test("Function Application") {
+    val tests = List(
+      TestInt("let identity = fn(x) { x; }; identity(5);", 5)
+      , TestInt("let identity = fn(x) { return x; }; identity(5);", 5)
+      , TestInt("let double = fn(x) { x * 2; }; double(5);", 10)
+      , TestInt("let add = fn(x, y) { x + y; }; add(5, 5);", 10)
+      , TestInt("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20)
+      , TestInt("fn(x) { x; }(5)", 5)
+    )
+
+    for (tt <- tests) {
+      printTTInt(tt)
+      val evaluated = testEval(tt.input)
+      testIntegerObject(evaluated, tt.expected)
+    }
+  }
+
+  test("Closures") {
+    val input = "let newAdder = fn(x) { " +
+      "  fn(y) { x + y };" +
+      "};" +
+      "let addTwo = newAdder(2);" +
+      "addTwo(2);"
+
+    val evaluated = testEval(input)
+    testIntegerObject(evaluated, 4)
+  }
+
+  test("String Literals") {
+    val input = "\"Hello World!\""
+
+    val evaluated = testEval(input)
+    assert(evaluated.isInstanceOf[StringObj])
+    val str = evaluated.asInstanceOf[StringObj]
+    assert(str.value == "Hello World!")
+  }
+
+  test("String Concatenation") {
+    val input = "\"Hello\" + \" \" + \"World!\""
+
+    val evaluated = testEval(input)
+    assert(evaluated.isInstanceOf[StringObj])
+    val str = evaluated.asInstanceOf[StringObj]
+    assert(str.value == "Hello World!")
+  }
+
+  test("Builtin Functions") {
+    val testInts = List(
+      TestInt("len(\"\")", 0)
+      , TestInt("len(\"four\")", 4)
+      , TestInt("len(\"hello world\")", 11)
+    )
+    val testStrs = List(
+      TestStr("len(1)", "argument to 'len' not supported, got=1")
+      , TestStr("len(\"one\",\"two\")", "wrong number of arguments, got=2, want=1")
+    )
+
+    for (tt <- testInts) {
+      printTTInt(tt)
+      val evaluated = testEval(tt.input)
+      testIntegerObject(evaluated, tt.expected)
+    }
+    for (tt <- testStrs) {
+      printTTStr(tt)
+      val evaluated = testEval(tt.input)
+      assert(evaluated.isInstanceOf[ErrorObj])
+      val err = evaluated.asInstanceOf[ErrorObj]
+      assert(err.message == tt.expected)
+    }
+  }
+
   def printTTStr(tt: TestStr): Unit = {
     println(s"input: ${tt.input}, expected: ${tt.expected}")
   }
@@ -212,7 +295,7 @@ class EvaluatorTest extends FunSuite {
   }
 
   def testErrorObject(obj: ObjectLiteral,
-                        expected: String) {
+                      expected: String) {
     val result = obj.asInstanceOf[ErrorObj]
     assert(result != null)
     assert(result.message == expected)
