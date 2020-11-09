@@ -2,7 +2,8 @@ package com.anton.monkey.evaluator
 
 import com.anton.monkey.ast.StringLiteral
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{BooleanObj, Environment, ErrorObj, FunctionObj, IntegerObj, NullObj, ObjectLiteral, ReturnValueObj, StringObj}
+import com.anton.monkey.objectliteral.BooleanObj.{FALSE, TRUE}
+import com.anton.monkey.objectliteral.{ArrayObj, BooleanObj, Environment, ErrorObj, FunctionObj, HashKey, HashObj, IntegerObj, NullObj, ObjectLiteral, ReturnValueObj, StringObj}
 import com.anton.monkey.parser.Parser
 import org.scalatest.FunSuite
 
@@ -282,6 +283,90 @@ class EvaluatorTest extends FunSuite {
     }
   }
 
+  test("Array Literals") {
+    val input = "[1, 2 * 2, 3 + 3]"
+
+    val evaluated = testEval(input)
+    assert(evaluated.isInstanceOf[ArrayObj])
+    val arr = evaluated.asInstanceOf[ArrayObj]
+    assert(arr.elements.length == 3)
+    testIntegerObject(arr.elements.head, 1)
+    testIntegerObject(arr.elements(1), 4)
+    testIntegerObject(arr.elements(2), 6)
+  }
+
+  test("Array Index Expressions") {
+    val tests = List(
+      TestInt("let identity = fn(x) { x; }; identity(5);", 5)
+      , TestInt("[1, 2, 3][0]", 1)
+      , TestInt("[1, 2, 3][1]", 2)
+      , TestInt("[1, 2, 3][2]", 3)
+      , TestInt("let i = 0; [1][i];", 1)
+      , TestInt("[1, 2, 3][1 + 1];", 3)
+      , TestInt("let myArray = [1, 2, 3]; myArray[2];", 3)
+      , TestInt("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6)
+      , TestInt("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];", 2)
+      , TestInt("[1, 2, 3][3]", NULL_VALUE)
+      , TestInt("[1, 2, 3][-1]", NULL_VALUE)
+    )
+
+    for (tt <- tests) {
+      printTTInt(tt)
+      val evaluated = testEval(tt.input)
+      testIntegerObject(evaluated, tt.expected)
+    }
+  }
+
+  test("Hash Literals") {
+    val input = "" +
+      "let two = \"two\";" +
+      "{" +
+      "\"one\": 10 - 9," +
+      "two: 1 + 1," +
+      "\"thr\" + \"ee\": 6 / 2," +
+      "4: 4," +
+      "true: 5," +
+      "false: 6" +
+      "}"
+
+    val evaluated = testEval(input)
+    assert(evaluated.isInstanceOf[HashObj])
+    val arr = evaluated.asInstanceOf[HashObj]
+    val expectedMap: Map[HashKey,Int] = Map(
+      StringObj("one").hashKey() -> 1,
+      StringObj("two").hashKey() -> 2,
+      StringObj("three").hashKey() -> 3,
+      IntegerObj(4).hashKey() -> 4,
+      TRUE.hashKey() -> 5,
+      FALSE.hashKey() -> 6
+    )
+    arr.pairs.foreachEntry((hashKey, hashPair) => {
+      val expected = expectedMap(hashKey)
+      println(s"actual: ${hashPair.key}: ${hashPair.value}" +
+        s", expected: ${expected}")
+      testIntegerObject(hashPair.value, expected)
+    })
+  }
+
+  test("Hash Index Expressions") {
+    val tests = List(
+      TestInt("let identity = fn(x) { x; }; identity(5);", 5)
+      , TestInt("{\"foo\": 5}[\"foo\"]", 5)
+      , TestInt("{\"foo\": 5}[\"bar\"]", NULL_VALUE)
+      , TestInt("let key = \"foo\"; {\"foo\": 5}[key]", 5)
+      , TestInt("{}[\"bar\"]", NULL_VALUE)
+      , TestInt("{5: 5}[5]",5)
+      , TestInt("{true: 5}[true]", 5)
+      , TestInt("{false: 5}[false]", 5)
+    )
+
+    for (tt <- tests) {
+      printTTInt(tt)
+      val evaluated = testEval(tt.input)
+      testIntegerObject(evaluated, tt.expected)
+    }
+  }
+
   def printTTStr(tt: TestStr): Unit = {
     println(s"input: ${tt.input}, expected: ${tt.expected}")
   }
@@ -310,6 +395,8 @@ class EvaluatorTest extends FunSuite {
 
   def testIntegerObject(obj: ObjectLiteral, expected: Int) {
     obj match {
+      case err0: ErrorObj =>
+        assert(expected == NULL_VALUE)
       case _: NullObj =>
         assert(expected == NULL_VALUE)
       case ret0: ReturnValueObj =>

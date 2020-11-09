@@ -369,7 +369,11 @@ class Evaluator {
       ErrorObj("Unusable as a hash key: %s"
         .format(index.objType()))
     }
-    val pair = hashObject.pairs(key.hashKey())
+    val key1 = key.hashKey()
+    if(!hashObject.pairs.contains(key1)){
+      return ErrorObj(s"key not found: $key1")
+    }
+    val pair = hashObject.pairs(key1)
     if (pair == null) {
       return NULL
     }
