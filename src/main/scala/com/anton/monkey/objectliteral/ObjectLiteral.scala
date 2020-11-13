@@ -160,6 +160,13 @@ case class CompiledFunction(
   override def inspect(): String = s"CompiledFunction[$instructions]"
 }
 
+case class Closure(fn: CompiledFunction,
+                   free: List[ObjectLiteral]) extends ObjectLiteral {
+  override def objType(): ObjectType = CLOSURE_OBJ
+
+  override def inspect(): String = s"Closure[$fn]($free)"
+}
+
 object ObjectType {
   def md5HashString(s: String): Int = {
     import java.security.MessageDigest
