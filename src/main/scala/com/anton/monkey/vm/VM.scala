@@ -1,11 +1,11 @@
 package com.anton.monkey.vm
 
-import com.anton.monkey.code.Code.{OpAdd, OpCode, OpConstant, OpDiv, OpMul, OpPop, OpSub, readUint16}
+import com.anton.monkey.code.Code.{OpAdd, OpBang, OpCode, OpConstant, OpDiv, OpEqual, OpFalse, OpGreaterThan, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpPop, OpSub, OpTrue, readUint16}
 import com.anton.monkey.code.{Code, Instructions}
 import com.anton.monkey.compiler.Bytecode
 import com.anton.monkey.objectliteral.ObjectType.{INTEGER_OBJ, STRING_OBJ}
-import com.anton.monkey.objectliteral.{BooleanObj, Closure, CompiledFunction, ErrorObj, NullObj, ObjectLiteral}
-import com.anton.monkey.vm.VM.stackSize
+import com.anton.monkey.objectliteral.{ArrayObj, BooleanObj, Closure, CompiledFunction, ErrorObj, IntegerObj, NullObj, ObjectLiteral, StringObj}
+import com.anton.monkey.vm.VM.{False, Null, True, stackSize}
 
 import scala.collection.mutable.ListBuffer
 
@@ -49,6 +49,48 @@ case class VM(constants: List[ObjectLiteral],
           val err = executeBinaryOperation(op)
           if(err != null) {
             return err
+          }
+
+        case OpTrue =>
+          val err = push(True)
+          if(err != null) {
+            return err
+          }
+
+        case OpFalse =>
+          val err = push(False)
+          if(err != null) {
+            return err
+          }
+
+        case OpEqual | OpNotEqual | OpGreaterThan =>
+          val err = executeComparison(op)
+          if(err != null) {
+            return err
+          }
+
+        case OpBang =>
+          val err = executeBangOperator(op)
+          if(err != null) {
+            return err
+          }
+
+        case OpMinus =>
+          val err = executeMinusOperator(op)
+          if(err != null) {
+            return err
+          }
+
+        case OpJump =>
+          val pos = Code.readUint16(ins.instructionArray,ip+1)
+          currentFrame().ip = pos - 1
+
+        case OpJumpNotTruthy =>
+          val pos = Code.readUint16(ins.instructionArray,ip+1)
+          currentFrame().ip += 2
+          val condition = pop()
+          if(!isTruthy(condition)) {
+            currentFrame().ip = pos - 1
           }
 
       }
@@ -106,14 +148,102 @@ case class VM(constants: List[ObjectLiteral],
 
   def executeBinaryIntegerOperation(op: OpCode,
                                     left: ObjectLiteral,
-                                    right: ObjectLiteral) {
-    null
+                                    right: ObjectLiteral): ErrorObj = {
+    val leftValue = left.asInstanceOf[IntegerObj]
+    val rightValue = right.asInstanceOf[IntegerObj]
+    var result: Int = 0
+    op match {
+      case OpAdd => result = leftValue.value + rightValue.value
+      case OpSub => result = leftValue.value - rightValue.value
+      case OpMul => result = leftValue.value * rightValue.value
+      case OpDiv => result = leftValue.value / rightValue.value
+      case _ => return ErrorObj(s"unknown integer operator: $op")
+    }
+    push(IntegerObj(result))
   }
 
   def executeBinaryStringOperation(op: OpCode,
                                     left: ObjectLiteral,
-                                    right: ObjectLiteral) {
+                                    right: ObjectLiteral): ErrorObj = {
+    val leftValue = left.asInstanceOf[StringObj]
+    val rightValue = right.asInstanceOf[StringObj]
+    var result: String = null
+    op match {
+      case OpAdd => result = leftValue.value + rightValue.value
+      case _ => return ErrorObj(s"unknown string operator: $op")
+    }
+    push(StringObj(result))
+  }
+
+  def executeComparison(op: OpCode): ErrorObj = {
+    val right = pop()
+    val left = pop()
+    if(left.objType() == INTEGER_OBJ && right.objType() == INTEGER_OBJ) {
+      return executeIntegerComparison(op, left, right)
+    }
     null
+  }
+
+  def executeIntegerComparison(op: OpCode,
+                               left: ObjectLiteral,
+                               right: ObjectLiteral): ErrorObj = {
+    val leftValue = left.asInstanceOf[IntegerObj].value
+    val rightValue = right.asInstanceOf[IntegerObj].value
+
+    op match {
+      case OpEqual =>
+        return push(nativeBoolToBooleanObject(leftValue == rightValue))
+      case OpNotEqual =>
+        return push(nativeBoolToBooleanObject(leftValue != rightValue))
+      case OpGreaterThan =>
+        return push(nativeBoolToBooleanObject(leftValue > rightValue))
+    }
+    ErrorObj(s"unknown operator $op")
+  }
+
+  def executeBangOperator(op: OpCode): ErrorObj = {
+    val operand = pop()
+    operand match {
+      case True => return push(False)
+      case False => return push(True)
+      case Null => return push(True)
+    }
+    push(False)
+  }
+
+  def executeMinusOperator(op: OpCode): ErrorObj = {
+    val operand = pop()
+    if(operand.objType() != INTEGER_OBJ) {
+      return ErrorObj(s"unsupported type for negation: $operand")
+    }
+    val value = operand.asInstanceOf[IntegerObj].value
+    push(IntegerObj(-value))
+  }
+
+  def nativeBoolToBooleanObject(input: Boolean): BooleanObj = {
+    if (input) {
+      return True
+    }
+    False
+  }
+
+  def buildArray(startIndex: Int, endIndex: Int): ObjectLiteral = {
+    val elements = new ListBuffer[ObjectLiteral]()
+    var i = startIndex
+    while(i < endIndex) {
+      elements(i-startIndex) = stack(i)
+      i += 1
+    }
+    ArrayObj(elements.toList)
+  }
+
+
+  def isTruthy(obj: ObjectLiteral): Boolean = {
+    obj match {
+      case bo: BooleanObj => return bo.value
+      case Null => return false
+    }
+    true
   }
 
 }
