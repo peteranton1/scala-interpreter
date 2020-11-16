@@ -1,6 +1,6 @@
 package com.anton.monkey.vm
 
-import com.anton.monkey.code.Code.{OpAdd, OpArray, OpBang, OpCall, OpCode, OpConstant, OpDiv, OpEqual, OpFalse, OpGetFree, OpGetGlobal, OpGetLocal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpSetGlobal, OpSetLocal, OpSub, OpTrue, readUint16}
+import com.anton.monkey.code.Code.{OpAdd, OpArray, OpBang, OpCall, OpClosure, OpCode, OpConstant, OpCurrentClosure, OpDiv, OpEqual, OpFalse, OpGetBuiltin, OpGetFree, OpGetGlobal, OpGetLocal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSetLocal, OpSub, OpTrue, readUint16}
 import com.anton.monkey.code.{Code, Instructions}
 import com.anton.monkey.compiler.Bytecode
 import com.anton.monkey.objectliteral.ObjectType.{ARRAY_OBJ, HASH_OBJ, INTEGER_OBJ, STRING_OBJ}
@@ -174,6 +174,47 @@ case class VM(constants: List[ObjectLiteral],
           currentFrame().ip += 1
           val err1 = executeCall(numArgs)
           if (err1 != null) {
+            return err1
+          }
+
+        case OpReturnValue =>
+          val returnValue = pop()
+          val frame = popFrame()
+          sp = frame.basePointer - 1
+          val err1 = push(returnValue)
+          if(err1 != null){
+            return err1
+          }
+
+        case OpReturn =>
+          val frame = popFrame()
+          sp = frame.basePointer - 1
+          val err1 = push(Null)
+          if(err1 != null){
+            return err1
+          }
+
+        case OpGetBuiltin =>
+          val frame = popFrame()
+          sp = frame.basePointer - 1
+          val err1 = push(Null)
+          if(err1 != null){
+            return err1
+          }
+
+        case OpClosure =>
+          val constIndex = Code.readUint16(ins.instructionArray, ip + 1)
+          val numFree = Code.readUint8(ins.instructionArray, ip + 3)
+          currentFrame().ip += 3
+          val err1 = pushClosure(constIndex, numFree)
+          if(err1 != null){
+            return err1
+          }
+
+        case OpCurrentClosure =>
+          val currentClosure = currentFrame().cl
+          val err1 = push(currentClosure)
+          if(err1 != null){
             return err1
           }
 
@@ -385,7 +426,7 @@ case class VM(constants: List[ObjectLiteral],
   def callClosure(cl: Closure, numArgs: Int): ErrorObj = {
     if (numArgs != cl.fn.numParameters) {
       return ErrorObj("wrong number of arguments: want=" +
-        s"$cl.fn.numParameters, got=%numArgs")
+        s"${cl.fn.numParameters}, got=$numArgs")
     }
     val frame = Frame.newFrame(cl, sp - numArgs)
     pushFrame(frame)
