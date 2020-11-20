@@ -209,7 +209,7 @@ class EvaluatorTest extends FunSuite {
     val fn = evaluated.asInstanceOf[FunctionObj]
     assert(fn.parameters.length == 1)
     assert(fn.parameters.head.String() == "x")
-    assert(fn.body.String() == "(x + 2)")
+    assert(fn.body.String() == "{ (x + 2) }")
   }
 
   test("Function Application") {

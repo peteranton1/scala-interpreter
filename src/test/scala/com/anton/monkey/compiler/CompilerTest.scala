@@ -334,7 +334,7 @@ class CompilerTest extends FunSuite {
           , Code.OpPop))
       , TestInput("let oneArg = fn(a) { a }; oneArg(24); ",
         List(CompiledFunction(Instructions(
-          Array(Code.OpGetLocal, byte_0, byte_0
+          Array(Code.OpGetLocal, byte_0
             , Code.OpReturnValue
           )), 0, 0)
           , int_24
@@ -348,11 +348,11 @@ class CompilerTest extends FunSuite {
       , TestInput("let manyArg = fn(a, b, c) { a; b; c }; " +
         "manyArg(24, 25, 26);",
         List(CompiledFunction(Instructions(
-          Array(Code.OpGetLocal, byte_0, byte_0
+          Array(Code.OpGetLocal, byte_0
             , Code.OpPop
-            , Code.OpGetLocal, byte_0, byte_1
+            , Code.OpGetLocal, byte_1
             , Code.OpPop
-            , Code.OpGetLocal, byte_0, byte_2
+            , Code.OpGetLocal, byte_2
             , Code.OpReturnValue
           )), 0, 0)
           , int_24
@@ -421,8 +421,8 @@ class CompilerTest extends FunSuite {
         List(int_55
           , CompiledFunction(Instructions(
             Array(Code.OpConstant, byte_0, byte_0
-              , Code.OpSetLocal, byte_0, byte_0
-              , Code.OpGetLocal, byte_0, byte_0
+              , Code.OpSetLocal, byte_0
+              , Code.OpGetLocal, byte_0
               , Code.OpReturnValue
             )), 0, 0)),
         Array(Code.OpClosure, byte_0, byte_1, byte_0
@@ -432,11 +432,11 @@ class CompilerTest extends FunSuite {
           , int_77
           , CompiledFunction(Instructions(
             Array(Code.OpConstant, byte_0, byte_0
-              , Code.OpSetLocal, byte_0, byte_0
+              , Code.OpSetLocal, byte_0
               , Code.OpConstant, byte_0, byte_1
-              , Code.OpSetLocal, byte_0, byte_1
-              , Code.OpGetLocal, byte_0, byte_0
-              , Code.OpGetLocal, byte_0, byte_1
+              , Code.OpSetLocal, byte_1
+              , Code.OpGetLocal, byte_0
+              , Code.OpGetLocal, byte_1
               , Code.OpAdd
               , Code.OpReturnValue
             )), 0, 0)),
@@ -479,12 +479,12 @@ class CompilerTest extends FunSuite {
       TestInput("fn(a) { fn(b) { a + b } } ",
         List(CompiledFunction(Instructions(
           Array(Code.OpGetFree, byte_0
-            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpGetLocal, byte_0
             , Code.OpAdd
             , Code.OpReturnValue
           )), 0, 0)
           , CompiledFunction(Instructions(
-            Array(Code.OpGetLocal, byte_0, byte_0
+            Array(Code.OpGetLocal, byte_0
               , Code.OpClosure, byte_0, byte_0, byte_1
               , Code.OpReturnValue
             )), 0, 0))
@@ -496,18 +496,18 @@ class CompilerTest extends FunSuite {
           Array(Code.OpGetFree, byte_0
             , Code.OpGetFree, byte_1
             , Code.OpAdd
-            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpGetLocal, byte_0
             , Code.OpAdd
             , Code.OpReturnValue
           )), 0, 0)
           , CompiledFunction(Instructions(
           Array(Code.OpGetFree, byte_0
-            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpGetLocal, byte_0
             , Code.OpClosure, byte_0, byte_0, byte_2
             , Code.OpReturnValue
           )), 0, 0)
           , CompiledFunction(Instructions(
-            Array(Code.OpGetLocal, byte_0, byte_0
+            Array(Code.OpGetLocal, byte_0
               , Code.OpClosure, byte_0, byte_1, byte_1
               , Code.OpReturnValue
             )), 0, 0))
@@ -530,28 +530,28 @@ class CompilerTest extends FunSuite {
           , int_88
           , CompiledFunction(Instructions(
           Array(Code.OpConstant, byte_0, byte_3
-            , Code.OpSetLocal, byte_0, byte_0
+            , Code.OpSetLocal, byte_0
             , Code.OpGetGlobal, byte_0, byte_0
             , Code.OpGetFree, byte_0
             , Code.OpAdd
             , Code.OpGetFree, byte_1
             , Code.OpAdd
-            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpGetLocal, byte_0
             , Code.OpAdd
             , Code.OpReturnValue
           )), 0, 0)
           , CompiledFunction(Instructions(
           Array(Code.OpConstant, byte_0, byte_2
-            , Code.OpSetLocal, byte_0, byte_0
+            , Code.OpSetLocal, byte_0
             , Code.OpGetFree, byte_0
-            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpGetLocal, byte_0
             , Code.OpClosure, byte_0, byte_4, byte_2
             , Code.OpReturnValue
           )), 0, 0)
           , CompiledFunction(Instructions(
             Array(Code.OpConstant, byte_0, byte_1
-              , Code.OpSetLocal, byte_0, byte_0
-              , Code.OpGetLocal, byte_0, byte_0
+              , Code.OpSetLocal, byte_0
+              , Code.OpGetLocal, byte_0
               , Code.OpClosure, byte_0, byte_5, byte_1
               , Code.OpReturnValue
             )), 0, 0))
@@ -574,7 +574,7 @@ class CompilerTest extends FunSuite {
           int_1
           , CompiledFunction(Instructions(
           Array(Code.OpCurrentClosure
-            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpGetLocal, byte_0
             , Code.OpConstant, byte_0, byte_0
             , Code.OpSub
             , Code.OpCall, byte_1
@@ -602,7 +602,7 @@ class CompilerTest extends FunSuite {
           int_1
           , CompiledFunction(Instructions(
           Array(Code.OpCurrentClosure
-            , Code.OpGetLocal, byte_0, byte_0
+            , Code.OpGetLocal, byte_0
             , Code.OpConstant, byte_0, byte_0
             , Code.OpSub
             , Code.OpCall, byte_1
@@ -611,8 +611,8 @@ class CompilerTest extends FunSuite {
           , int_1
           , CompiledFunction(Instructions(
             Array(Code.OpClosure, byte_0, byte_1, byte_0
-              , Code.OpSetLocal, byte_0, byte_0
-              , Code.OpGetLocal, byte_0, byte_0
+              , Code.OpSetLocal, byte_0
+              , Code.OpGetLocal, byte_0
               , Code.OpConstant, byte_0, byte_2
               , Code.OpCall, byte_1
               , Code.OpReturnValue
@@ -651,9 +651,9 @@ class CompilerTest extends FunSuite {
                        actual: Instructions) {
     var i = 0
     val actualArray = actual.instructionArray
-    println(
-      s"Instructions ($input) expect = ${expected.toList}, \n" +
-        s"             ($input) actual = ${actualArray.toList} ")
+//    println(
+//      s"Instructions ($input) expect = ${expected.toList}, \n" +
+//        s"             ($input) actual = ${actualArray.toList} ")
     while (i < expected.length) {
       val byteExpect = expected(i)
       val byteActual = actualArray(i)
@@ -666,9 +666,9 @@ class CompilerTest extends FunSuite {
                     expected: List[ObjectLiteral],
                     actual: List[ObjectLiteral]) {
     var i = 0
-    println(
-      s"Constants ($input) expect = \n${expected}, \n" +
-        s"          ($input) actual = \n${actual} ")
+//    println(
+//      s"Constants ($input) expect = \n${expected}, \n" +
+//        s"          ($input) actual = \n${actual} ")
     while (i < expected.length) {
       val valueExpect = expected(i)
       val valueActual = actual(i)

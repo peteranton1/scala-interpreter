@@ -18,7 +18,7 @@ class BuiltinTest extends FunSuite {
       ,TestData(List(StringObj("ab")),IntegerObj(2))
       ,TestData(List(StringObj("abc")),IntegerObj(3))
       ,TestData(List(IntegerObj(1)),ErrorObj(
-        "argument to 'len' not supported, got=IntegerObj(1)"
+        "argument to 'len' not supported, got=1"
       ))
     )
     for (tt <- tests) {
@@ -62,10 +62,10 @@ class BuiltinTest extends FunSuite {
       ,TestData(List(ArrayObj(List(obj1,obj2))),obj1)
       ,TestData(List(ArrayObj(List(obj1,obj2,obj3))),obj1)
       ,TestData(List(StringObj("")),ErrorObj(
-        "argument to 'first' must be ARRAY, got=ObjectType(STRING)"
+        "argument to 'first' must be ARRAY, got=STRING"
         ))
       ,TestData(List(IntegerObj(1)),ErrorObj(
-        "argument to 'first' must be ARRAY, got=ObjectType(INTEGER)"
+        "argument to 'first' must be ARRAY, got=INTEGER"
       )))
     for (tt <- tests) {
       val actual = Builtin.firstFunc(tt.args)
@@ -88,10 +88,10 @@ class BuiltinTest extends FunSuite {
       ,TestData(List(ArrayObj(List(obj1,obj2))),obj2)
       ,TestData(List(ArrayObj(List(obj1,obj2,obj3))),obj3)
       ,TestData(List(StringObj("")),ErrorObj(
-        "argument to 'last' must be ARRAY, got=ObjectType(STRING)"
+        "argument to 'last' must be ARRAY, got=STRING"
         ))
       ,TestData(List(IntegerObj(1)),ErrorObj(
-        "argument to 'last' must be ARRAY, got=ObjectType(INTEGER)"
+        "argument to 'last' must be ARRAY, got=INTEGER"
       )))
     for (tt <- tests) {
       val actual = Builtin.lastFunc(tt.args)
@@ -114,10 +114,10 @@ class BuiltinTest extends FunSuite {
       ,TestData(List(ArrayObj(List(obj1,obj2))),ArrayObj(List(obj2)))
       ,TestData(List(ArrayObj(List(obj1,obj2,obj3))),ArrayObj(List(obj2,obj3)))
       ,TestData(List(StringObj("")),ErrorObj(
-        "argument to 'rest' must be ARRAY, got=ObjectType(STRING)"
+        "argument to 'rest' must be ARRAY, got=STRING"
         ))
       ,TestData(List(IntegerObj(1)),ErrorObj(
-        "argument to 'rest' must be ARRAY, got=ObjectType(INTEGER)"
+        "argument to 'rest' must be ARRAY, got=INTEGER"
       )))
     for (tt <- tests) {
       val actual = Builtin.restFunc(tt.args)
@@ -140,10 +140,10 @@ class BuiltinTest extends FunSuite {
       ,TestData(List(ArrayObj(List(obj1)),obj2),ArrayObj(List(obj1,obj2)))
       ,TestData(List(ArrayObj(List(obj1,obj2)),obj3),ArrayObj(List(obj1,obj2,obj3)))
       ,TestData(List(StringObj(""),obj1),ErrorObj(
-        "argument to 'push' must be ARRAY, got=ObjectType(STRING)"
+        "argument to 'push' must be ARRAY, got=STRING"
         ))
       ,TestData(List(IntegerObj(1),obj1),ErrorObj(
-        "argument to 'push' must be ARRAY, got=ObjectType(INTEGER)"
+        "argument to 'push' must be ARRAY, got=INTEGER"
       )))
     for (tt <- tests) {
       val actual = Builtin.pushFunc(tt.args)

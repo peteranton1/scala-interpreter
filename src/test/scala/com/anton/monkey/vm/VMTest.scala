@@ -3,8 +3,9 @@ package com.anton.monkey.vm
 import com.anton.monkey.ast.Program
 import com.anton.monkey.compiler.Compiler
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{BooleanObj, IntegerObj, ObjectLiteral}
+import com.anton.monkey.objectliteral.{BooleanObj, IntegerObj, NullObj, ObjectLiteral}
 import com.anton.monkey.parser.Parser
+import com.anton.monkey.vm.VM.Null
 import org.scalatest.FunSuite
 
 class VMTest extends FunSuite {
@@ -72,6 +73,24 @@ class VMTest extends FunSuite {
     runVMTestsBool(tests)
   }
 
+  test("Conditionals") {
+    val tests = List(
+      TestInt("1", 1),
+      TestInt("if (true) { 10 }", 10),
+      TestInt("if (true) { 10 } else { 20 }", 10),
+      TestInt("if (false) { 10 } else { 20 }", 20),
+      TestInt("if (1) { 10 }", 10),
+      TestInt("if (1 < 2) { 10 }", 10),
+      TestInt("if (1 < 2) { 10 } else { 20 }", 10),
+      TestInt("if (1 > 2) { 10 } else { 20 }", 20),
+      TestInt("if (1 > 2) { 10 }", NULL_VALUE),
+      TestInt("if (false) { 10 }", NULL_VALUE),
+      TestInt("if ((if (false) { 10 })) { 10 } else { 20 }", 20)
+    )
+
+    runVMTestsInt(tests)
+  }
+
   def parse(input: String): Program = {
     val l = Lexer.New(input)
     val p = Parser.New(l)
@@ -91,6 +110,7 @@ class VMTest extends FunSuite {
 
   def runVMTestsInt(tests: List[TestInt]): Unit = {
     for (tt <- tests) {
+      //println("Testing: " + tt.input)
       val stackElem = getLastPopped(tt.input)
       testExpectedObjectInt(tt.input, tt.expected, stackElem)
     }
@@ -98,7 +118,6 @@ class VMTest extends FunSuite {
 
   def runVMTestsBool(tests: List[TestBool]): Unit = {
     for (tt <- tests) {
-      println("Testing: " + tt.input)
       val stackElem = getLastPopped(tt.input)
       testExpectedObjectBool(tt.input, tt.expected, stackElem)
     }
@@ -109,10 +128,12 @@ class VMTest extends FunSuite {
     actual match {
       case io: IntegerObj =>
         assert(io.value == expected)
-        return
+      case Null =>
+        assert(expected == NULL_VALUE)
+      case _ =>
+        assert("object not integer: " +
+          s"${actual.objType()}" == s"input=$input")
     }
-    assert("object not integer: " +
-      s"${actual.objType()}" == s"input=$input")
   }
 
   def testExpectedObjectBool(input: String, expected: Boolean,

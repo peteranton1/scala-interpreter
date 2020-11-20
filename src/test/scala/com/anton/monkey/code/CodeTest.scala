@@ -51,7 +51,7 @@ class CodeTest extends FunSuite {
     val rightStr = convertBytesToHex(right)
     val msg = String.format("assertArray(%d)(%s = %s)",
       left.length, leftStr, rightStr)
-    println(msg)
+    //println(msg)
     left.foreach(leftElem => {
       val rightElem = right(index)
       assert(leftElem == rightElem)

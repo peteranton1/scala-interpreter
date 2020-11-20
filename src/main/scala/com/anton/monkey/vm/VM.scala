@@ -494,10 +494,10 @@ case class VM(constants: List[ObjectLiteral],
 
   def isTruthy(obj: ObjectLiteral): Boolean = {
     obj match {
-      case bo: BooleanObj => return bo.value
-      case Null => return false
+      case bo: BooleanObj => bo.value
+      case Null => false
+      case _ => true
     }
-    true
   }
 
 }

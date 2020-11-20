@@ -131,7 +131,7 @@ case class IfExpression(token: Token, condition: Expression,
   override def TokenLiteral(): String = token.literal
 
   override def String(): String = {
-    val frag = if (alternative != null) " else " + alternative.String() else ""
+    val frag = if (alternative != null) " else " + alternative.String()  else ""
     "if (" + condition.String() + ") " + consequence.String() + frag
   }
 }
@@ -142,7 +142,7 @@ case class BlockStatement(token: Token, statements: List[Statement]) extends Sta
   override def TokenLiteral(): String = token.literal
 
   override def String(): String =
-    statements.map(_.String()).mkString(" ")
+    "{ " + statements.map(_.String()).mkString(" ") + " }"
 }
 
 case class FunctionLiteral(token: Token, parameters: List[Identifier],

@@ -52,8 +52,15 @@ case class NullObj() extends ObjectLiteral {
   override def toString: String = inspect()
 }
 
-object NullObj {
+object NullObj extends ObjectLiteral {
   val NULL: NullObj = NullObj()
+  override def objType(): ObjectType = NULL_OBJ
+
+  override def inspect(): String = {
+    "NULL"
+  }
+
+  override def toString: String = inspect()
 }
 
 case class ReturnValueObj(value: ObjectLiteral) extends ObjectLiteral {
