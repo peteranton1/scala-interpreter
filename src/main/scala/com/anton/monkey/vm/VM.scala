@@ -15,16 +15,17 @@ case class VM(constants: List[ObjectLiteral],
               var sp: Int,
               globals: ListBuffer[ObjectLiteral],
               frames: ListBuffer[Frame],
-              framesIndex: Int) {
+              var framesIndex: Int) {
+  var lastPopped: ObjectLiteral = null
 
   def lastPoppedStackElem(): ObjectLiteral = {
-    stack(sp)
+    lastPopped
   }
 
   def run(): ObjectLiteral = {
     var ip: Int = 0
     var ins: Instructions = null
-    var op: OpCode = null
+    var op: OpCode = 0.toByte
 
     while (currentFrame().ip <
       currentFrame().instructions().instructionArray.length - 1) {
@@ -233,11 +234,12 @@ case class VM(constants: List[ObjectLiteral],
   }
 
   def pop(): ObjectLiteral = {
-    if (sp <= 0) {
+    if (sp < 0) {
       return ErrorObj(s"Stack Underflow: $sp")
     }
+    lastPopped = stack.remove(sp-1)
     sp -= 1
-    stack.remove(sp)
+    lastPopped
   }
 
   def executeBinaryOperation(op: OpCode): ErrorObj = {
