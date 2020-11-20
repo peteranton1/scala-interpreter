@@ -85,14 +85,14 @@ case class VM(constants: List[ObjectLiteral],
 
         case OpJump =>
           val pos = Code.readUint16(ins.instructionArray, ip + 1)
-          currentFrame().ip = pos - 1
+          currentFrame().ip = pos
 
         case OpJumpNotTruthy =>
           val pos = Code.readUint16(ins.instructionArray, ip + 1)
           currentFrame().ip += 2
           val condition = pop()
           if (!isTruthy(condition)) {
-            currentFrame().ip = pos - 1
+            currentFrame().ip = pos
           }
 
         case OpNull =>
@@ -219,9 +219,18 @@ case class VM(constants: List[ObjectLiteral],
             return err1
           }
 
+        case _ =>
+          return ErrorObj(s"Unknown opcode: $op" +
+          s", ip: $ip, ins: ${showBytes(ins.instructionArray)}" +
+            s"\n ins: ${ins}")
       }
     }
     null
+  }
+
+  def showBytes(bytes: Array[Byte]):String = {
+    bytes.map(b => "" + b.toInt)
+      .mkString(" ")
   }
 
   def push(obj: ObjectLiteral): ErrorObj = {
@@ -293,7 +302,14 @@ case class VM(constants: List[ObjectLiteral],
     if (left.objType() == INTEGER_OBJ && right.objType() == INTEGER_OBJ) {
       return executeIntegerComparison(op, left, right)
     }
-    null
+    op match {
+      case OpEqual =>
+        return push(nativeBoolToBooleanObject(right == left))
+      case OpNotEqual =>
+        return push(nativeBoolToBooleanObject(right != left))
+    }
+    ErrorObj("unknown operator " +
+      s"$op (${left.objType()} ${right.objType()}")
   }
 
   def executeIntegerComparison(op: OpCode,
@@ -316,11 +332,11 @@ case class VM(constants: List[ObjectLiteral],
   def executeBangOperator(op: OpCode): ErrorObj = {
     val operand = pop()
     operand match {
-      case True => return push(False)
-      case False => return push(True)
-      case Null => return push(True)
+      case True => push(False)
+      case False => push(True)
+      case Null => push(True)
+      case _ => push(False)
     }
-    push(False)
   }
 
   def executeMinusOperator(op: OpCode): ErrorObj = {

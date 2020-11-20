@@ -3,7 +3,7 @@ package com.anton.monkey.vm
 import com.anton.monkey.ast.Program
 import com.anton.monkey.compiler.Compiler
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{IntegerObj, ObjectLiteral}
+import com.anton.monkey.objectliteral.{BooleanObj, IntegerObj, ObjectLiteral}
 import com.anton.monkey.parser.Parser
 import org.scalatest.FunSuite
 
@@ -41,6 +41,37 @@ class VMTest extends FunSuite {
     runVMTestsInt(tests)
   }
 
+  test("Boolean Expressions") {
+    val tests = List(
+      TestBool("true", true),
+      TestBool("false", false),
+      TestBool("1 < 2", true),
+      TestBool("1 > 2", false),
+      TestBool("1 < 1", false),
+      TestBool("1 > 1", false),
+      TestBool("1 == 1", true),
+      TestBool("1 != 1", false),
+      TestBool("1 == 2", false),
+      TestBool("1 != 2", true),
+      TestBool("true == true", true),
+      TestBool("false == false", true),
+      TestBool("true == false", false),
+      TestBool("true != false", true),
+      TestBool("(1 < 2) == true", true),
+      TestBool("(1 < 2) == false", false),
+      TestBool("(1 > 2) == true", false),
+      TestBool("!true", false),
+      TestBool("!false", true),
+      TestBool("!5", false),
+      TestBool("!!true", true),
+      TestBool("!!false", false),
+      TestBool("!!5", true),
+      TestBool("!(if(false){ 5; })", true)
+    )
+
+    runVMTestsBool(tests)
+  }
+
   def parse(input: String): Program = {
     val l = Lexer.New(input)
     val p = Parser.New(l)
@@ -60,9 +91,16 @@ class VMTest extends FunSuite {
 
   def runVMTestsInt(tests: List[TestInt]): Unit = {
     for (tt <- tests) {
-      println("Testing: " + tt.input)
       val stackElem = getLastPopped(tt.input)
       testExpectedObjectInt(tt.input, tt.expected, stackElem)
+    }
+  }
+
+  def runVMTestsBool(tests: List[TestBool]): Unit = {
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val stackElem = getLastPopped(tt.input)
+      testExpectedObjectBool(tt.input, tt.expected, stackElem)
     }
   }
 
@@ -74,6 +112,17 @@ class VMTest extends FunSuite {
         return
     }
     assert("object not integer: " +
+      s"${actual.objType()}" == s"input=$input")
+  }
+
+  def testExpectedObjectBool(input: String, expected: Boolean,
+                            actual: ObjectLiteral): Unit = {
+    actual match {
+      case bo: BooleanObj =>
+        assert(bo.value == expected)
+        return
+    }
+    assert("object not boolean: " +
       s"${actual.objType()}" == s"input=$input")
   }
 
