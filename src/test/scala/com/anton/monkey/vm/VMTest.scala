@@ -3,7 +3,7 @@ package com.anton.monkey.vm
 import com.anton.monkey.ast.Program
 import com.anton.monkey.compiler.Compiler
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{BooleanObj, IntegerObj, NullObj, ObjectLiteral}
+import com.anton.monkey.objectliteral.{ArrayObj, BooleanObj, IntegerObj, NullObj, ObjectLiteral}
 import com.anton.monkey.parser.Parser
 import com.anton.monkey.vm.VM.Null
 import org.scalatest.FunSuite
@@ -15,6 +15,8 @@ class VMTest extends FunSuite {
   case class TestStr(input: String, expected: String)
 
   case class TestInt(input: String, expected: Int)
+
+  case class TestIntArr(input: String, expected: List[Int])
 
   case class TestBool(input: String, expected: Boolean)
 
@@ -91,6 +93,36 @@ class VMTest extends FunSuite {
     runVMTestsInt(tests)
   }
 
+  test("Global let statements") {
+    val tests = List(
+      TestInt("let one = 1; one", 1),
+      TestInt("let one = 1; let two = 2; one + two", 3),
+      TestInt("let one = 1; let two = one + one; one + two", 3)
+    )
+
+    runVMTestsInt(tests)
+  }
+
+  test("String expressions") {
+    val tests = List(
+      TestStr("\"monkey\"", "monkey"),
+      TestStr("\"mon\" + \"key\"", "monkey"),
+      TestStr("\"mon\" + \"key\" + \"banana\"", "monkeybanana")
+    )
+
+    runVMTestsStr(tests)
+  }
+
+  test("Array Literals") {
+    val tests = List(
+      TestIntArr("[]", List()),
+      TestIntArr("[1, 2, 3]", List(1, 2, 3)),
+      TestIntArr("[1 + 2, 3 * 4, 5 + 6]", List(3, 12, 11))
+    )
+
+    runVMTestsIntArr(tests)
+  }
+
   def parse(input: String): Program = {
     val l = Lexer.New(input)
     val p = Parser.New(l)
@@ -108,11 +140,27 @@ class VMTest extends FunSuite {
     vm.lastPoppedStackElem()
   }
 
+  def runVMTestsStr(tests: List[TestStr]): Unit = {
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val stackElem = getLastPopped(tt.input)
+      assert (tt.expected == stackElem.inspect())
+    }
+  }
+
   def runVMTestsInt(tests: List[TestInt]): Unit = {
     for (tt <- tests) {
       //println("Testing: " + tt.input)
       val stackElem = getLastPopped(tt.input)
       testExpectedObjectInt(tt.input, tt.expected, stackElem)
+    }
+  }
+
+  def runVMTestsIntArr(tests: List[TestIntArr]): Unit = {
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val stackElem = getLastPopped(tt.input)
+      testExpectedObjectIntArr(tt.input, tt.expected, stackElem)
     }
   }
 
@@ -130,6 +178,26 @@ class VMTest extends FunSuite {
         assert(io.value == expected)
       case Null =>
         assert(expected == NULL_VALUE)
+      case _ =>
+        assert("object not integer: " +
+          s"${actual.objType()}" == s"input=$input")
+    }
+  }
+
+  def testExpectedObjectIntArr(input: String, expected: List[Int],
+                            actual: ObjectLiteral): Unit = {
+    actual match {
+      case ao: ArrayObj =>
+        assert(ao.elements.length == expected.length)
+        var i = 0
+        while(i < expected.length) {
+          val act = ao.elements(i)
+          val expect = expected(i)
+          assert(act.inspect() == expect.toString)
+          i += 1
+        }
+      case io: IntegerObj =>
+        println(s"tested integer: $io")
       case _ =>
         assert("object not integer: " +
           s"${actual.objType()}" == s"input=$input")

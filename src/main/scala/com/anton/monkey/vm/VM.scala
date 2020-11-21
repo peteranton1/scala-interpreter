@@ -104,7 +104,7 @@ case class VM(constants: List[ObjectLiteral],
         case OpSetGlobal =>
           val globalIndex = Code.readUint16(ins.instructionArray, ip + 1)
           currentFrame().ip += 2
-          globals(globalIndex) = pop()
+          globals.addOne(pop())
 
         case OpGetGlobal =>
           val globalIndex = Code.readUint16(ins.instructionArray, ip + 1)
@@ -142,7 +142,8 @@ case class VM(constants: List[ObjectLiteral],
           val numElements = Code.readUint16(ins.instructionArray, ip + 1)
           currentFrame().ip += 2
           val array = buildArray(sp - numElements, sp)
-          sp = sp - numElements
+          //below not needed because of buildArray
+          //sp = sp - numElements
 
           val err1 = push(array)
           if (err1 != null) {
@@ -359,10 +360,10 @@ case class VM(constants: List[ObjectLiteral],
     val elements = new ListBuffer[ObjectLiteral]()
     var i = startIndex
     while (i < endIndex) {
-      elements.addOne(stack(i))
+      elements.addOne(pop())
       i += 1
     }
-    ArrayObj(elements.toList)
+    ArrayObj(elements.reverse.toList)
   }
 
   def buildHash(startIndex: Int, endIndex: Int): (ObjectLiteral, ErrorObj) = {
