@@ -16,7 +16,7 @@ case class VM(constants: List[ObjectLiteral],
               globals: ListBuffer[ObjectLiteral],
               frames: ListBuffer[Frame],
               var framesIndex: Int) {
-  var lastPopped: ObjectLiteral = null
+  var lastPopped: ObjectLiteral = Null
 
   def lastPoppedStackElem(): ObjectLiteral = {
     lastPopped
@@ -72,13 +72,13 @@ case class VM(constants: List[ObjectLiteral],
           }
 
         case OpBang =>
-          val err1 = executeBangOperator(op)
+          val err1 = executeBangOperator()
           if (err1 != null) {
             return err1
           }
 
         case OpMinus =>
-          val err1 = executeMinusOperator(op)
+          val err1 = executeMinusOperator()
           if (err1 != null) {
             return err1
           }
@@ -102,7 +102,7 @@ case class VM(constants: List[ObjectLiteral],
           }
 
         case OpSetGlobal =>
-          val globalIndex = Code.readUint16(ins.instructionArray, ip + 1)
+          //val globalIndex = Code.readUint16(ins.instructionArray, ip + 1)
           currentFrame().ip += 2
           globals.addOne(pop())
 
@@ -157,7 +157,6 @@ case class VM(constants: List[ObjectLiteral],
           if (err1 != null) {
             return err1
           }
-          sp = sp - numElements
           val err2 = push(hash)
           if (err2 != null) {
             return err2
@@ -223,7 +222,7 @@ case class VM(constants: List[ObjectLiteral],
         case _ =>
           return ErrorObj(s"Unknown opcode: $op" +
           s", ip: $ip, ins: ${showBytes(ins.instructionArray)}" +
-            s"\n ins: ${ins}")
+            s"\n ins: $ins")
       }
     }
     null
@@ -330,7 +329,7 @@ case class VM(constants: List[ObjectLiteral],
     ErrorObj(s"unknown operator $op")
   }
 
-  def executeBangOperator(op: OpCode): ErrorObj = {
+  def executeBangOperator(): ErrorObj = {
     val operand = pop()
     operand match {
       case True => push(False)
@@ -340,7 +339,7 @@ case class VM(constants: List[ObjectLiteral],
     }
   }
 
-  def executeMinusOperator(op: OpCode): ErrorObj = {
+  def executeMinusOperator(): ErrorObj = {
     val operand = pop()
     if (operand.objType() != INTEGER_OBJ) {
       return ErrorObj(s"unsupported type for negation: $operand")
@@ -370,15 +369,15 @@ case class VM(constants: List[ObjectLiteral],
     val hashPairs = mutable.Map[HashKey, HashPair]()
     var i = startIndex
     while (i < endIndex) {
-      val key = stack(i)
-      val value = stack(i + 1)
+      val value = pop()
+      val key = pop()
       val pair = HashPair(key, value)
       if (!key.isInstanceOf[Hashable]) {
         return (null, ErrorObj(s"unusable as hash key: $key"))
       }
       val hashKey = key.asInstanceOf[Hashable]
       hashPairs(hashKey.hashKey()) = pair
-      i += 1
+      i += 2
     }
     (HashObj(hashPairs), null)
   }

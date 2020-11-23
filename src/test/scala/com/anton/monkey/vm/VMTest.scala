@@ -3,14 +3,18 @@ package com.anton.monkey.vm
 import com.anton.monkey.ast.Program
 import com.anton.monkey.compiler.Compiler
 import com.anton.monkey.lexer.Lexer
-import com.anton.monkey.objectliteral.{ArrayObj, BooleanObj, IntegerObj, NullObj, ObjectLiteral}
+import com.anton.monkey.objectliteral._
 import com.anton.monkey.parser.Parser
 import com.anton.monkey.vm.VM.Null
 import org.scalatest.FunSuite
 
+import scala.collection.mutable
+
 class VMTest extends FunSuite {
 
   val NULL_VALUE: Int = -9999
+
+  case class TestHash(input: String, expected: HashObj)
 
   case class TestStr(input: String, expected: String)
 
@@ -46,30 +50,30 @@ class VMTest extends FunSuite {
 
   test("Boolean Expressions") {
     val tests = List(
-      TestBool("true", true),
-      TestBool("false", false),
-      TestBool("1 < 2", true),
-      TestBool("1 > 2", false),
-      TestBool("1 < 1", false),
-      TestBool("1 > 1", false),
-      TestBool("1 == 1", true),
-      TestBool("1 != 1", false),
-      TestBool("1 == 2", false),
-      TestBool("1 != 2", true),
-      TestBool("true == true", true),
-      TestBool("false == false", true),
-      TestBool("true == false", false),
-      TestBool("true != false", true),
-      TestBool("(1 < 2) == true", true),
-      TestBool("(1 < 2) == false", false),
-      TestBool("(1 > 2) == true", false),
-      TestBool("!true", false),
-      TestBool("!false", true),
-      TestBool("!5", false),
-      TestBool("!!true", true),
-      TestBool("!!false", false),
-      TestBool("!!5", true),
-      TestBool("!(if(false){ 5; })", true)
+      TestBool("true", expected = true),
+      TestBool("false", expected = false),
+      TestBool("1 < 2", expected = true),
+      TestBool("1 > 2", expected = false),
+      TestBool("1 < 1", expected = false),
+      TestBool("1 > 1", expected = false),
+      TestBool("1 == 1", expected = true),
+      TestBool("1 != 1", expected = false),
+      TestBool("1 == 2", expected = false),
+      TestBool("1 != 2", expected = true),
+      TestBool("true == true", expected = true),
+      TestBool("false == false", expected = true),
+      TestBool("true == false", expected = false),
+      TestBool("true != false", expected = true),
+      TestBool("(1 < 2) == true", expected = true),
+      TestBool("(1 < 2) == false", expected = false),
+      TestBool("(1 > 2) == true", expected = false),
+      TestBool("!true", expected = false),
+      TestBool("!false", expected = true),
+      TestBool("!5", expected = false),
+      TestBool("!!true", expected = true),
+      TestBool("!!false", expected = false),
+      TestBool("!!5", expected = true),
+      TestBool("!(if(false){ 5; })", expected = true)
     )
 
     runVMTestsBool(tests)
@@ -107,7 +111,7 @@ class VMTest extends FunSuite {
     val tests = List(
       TestStr("\"monkey\"", "monkey"),
       TestStr("\"mon\" + \"key\"", "monkey"),
-      TestStr("\"mon\" + \"key\" + \"banana\"", "monkeybanana")
+      TestStr("\"mon\" + \"key\" + \" banana\"", "monkey banana")
     )
 
     runVMTestsStr(tests)
@@ -121,6 +125,29 @@ class VMTest extends FunSuite {
     )
 
     runVMTestsIntArr(tests)
+  }
+
+  test("Hash Literals") {
+    val int_1 = IntegerObj(1)
+    val int_2 = IntegerObj(2)
+    val int_3 = IntegerObj(3)
+    val int_4 = IntegerObj(4)
+    val int_6 = IntegerObj(6)
+    val int_16 = IntegerObj(16)
+    val tests = List(
+      TestHash("{}",
+        HashObj(pairs = mutable.Map[HashKey, HashPair]())),
+      TestHash("{1: 2, 2: 3}",
+        HashObj(pairs = mutable.Map(
+          int_1.hashKey() -> HashPair(int_1, int_2),
+          int_2.hashKey() -> HashPair(int_2,int_3)))),
+      TestHash("{1 + 1: 2 * 2, 3 + 3: 4 * 4}",
+        HashObj(pairs = mutable.Map(
+          int_2.hashKey() -> HashPair(int_2,int_4),
+          int_6.hashKey() -> HashPair(int_6,int_16))))
+    )
+
+    runVMTestsHash(tests)
   }
 
   def parse(input: String): Program = {
@@ -158,9 +185,16 @@ class VMTest extends FunSuite {
 
   def runVMTestsIntArr(tests: List[TestIntArr]): Unit = {
     for (tt <- tests) {
-      println("Testing: " + tt.input)
       val stackElem = getLastPopped(tt.input)
       testExpectedObjectIntArr(tt.input, tt.expected, stackElem)
+    }
+  }
+
+  def runVMTestsHash(tests: List[TestHash]): Unit = {
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val stackElem = getLastPopped(tt.input)
+      testExpectedObjectHash(tt.input, tt.expected, stackElem)
     }
   }
 
@@ -199,8 +233,28 @@ class VMTest extends FunSuite {
       case io: IntegerObj =>
         println(s"tested integer: $io")
       case _ =>
-        assert("object not integer: " +
-          s"${actual.objType()}" == s"input=$input")
+        assert("object not array: " +
+          s"$actual: ${actual.objType()}" == s"input=$input")
+    }
+  }
+
+  def testExpectedObjectHash(input: String,
+                             expected: HashObj,
+                             actual: ObjectLiteral): Unit = {
+    actual match {
+      case ho: HashObj =>
+        println(s"\thash obj: input: $input")
+        assert(ho.pairs.keys.size == expected.pairs.keys.size)
+        for(key <- expected.pairs.keys) {
+          val act = ho.pairs(key)
+          val expect = expected.pairs(key)
+          println(s"\t\thash key: $key, act: $act, expect: $expect")
+          assert(act.key == expect.key)
+          assert(act.value == expect.value)
+        }
+      case _ =>
+        assert("object not hash: " +
+          s"$actual: ${actual.objType()}" == s"input=$input")
     }
   }
 
