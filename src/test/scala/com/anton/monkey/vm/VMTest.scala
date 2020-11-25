@@ -150,6 +150,39 @@ class VMTest extends FunSuite {
     runVMTestsHash(tests)
   }
 
+  test("Index Expressions") {
+    val tests = List(
+      TestInt("[1, 2, 3][1]", 2),
+      TestInt("[1, 2, 3][0 + 2]", 3),
+      TestInt("[[1, 1, 1]][0][0]", 1),
+      TestInt("[][0]", NULL_VALUE),
+      TestInt("[1, 2, 3][99]", NULL_VALUE),
+      TestInt("[1][-1]", NULL_VALUE),
+      TestInt("{1: 1, 2: 2}[1]", 1),
+      TestInt("{1: 1, 2: 2}[2]", 2),
+      TestInt("{1: 1}[0]", NULL_VALUE),
+      TestInt("{}[0]", NULL_VALUE)
+    )
+
+    runVMTestsInt(tests)
+  }
+
+  test("Calling Functions without arguments") {
+    val tests = List(
+      TestInt("let fivePlusTen = fn() { 5 + 10; }; " +
+        "fivePlusTen(); ", 15),
+      TestInt(" let one = fn() { 1; }; " +
+        "let two = fn() { 2; }; " +
+        "one() + two();", 3),
+      TestInt("let a = fn() { 1; }; " +
+        "let b = fn() { a() + 1; }; " +
+        "let c = fn() { b() + 1; }; " +
+        "c(); ", 3)
+    )
+
+    runVMTestsInt(tests)
+  }
+
   def parse(input: String): Program = {
     val l = Lexer.New(input)
     val p = Parser.New(l)
@@ -169,7 +202,7 @@ class VMTest extends FunSuite {
 
   def runVMTestsStr(tests: List[TestStr]): Unit = {
     for (tt <- tests) {
-      println("Testing: " + tt.input)
+      //println("Testing: " + tt.input)
       val stackElem = getLastPopped(tt.input)
       assert (tt.expected == stackElem.inspect())
     }
@@ -192,7 +225,7 @@ class VMTest extends FunSuite {
 
   def runVMTestsHash(tests: List[TestHash]): Unit = {
     for (tt <- tests) {
-      println("Testing: " + tt.input)
+      //println("Testing: " + tt.input)
       val stackElem = getLastPopped(tt.input)
       testExpectedObjectHash(tt.input, tt.expected, stackElem)
     }
@@ -243,12 +276,10 @@ class VMTest extends FunSuite {
                              actual: ObjectLiteral): Unit = {
     actual match {
       case ho: HashObj =>
-        println(s"\thash obj: input: $input")
         assert(ho.pairs.keys.size == expected.pairs.keys.size)
         for(key <- expected.pairs.keys) {
           val act = ho.pairs(key)
           val expect = expected.pairs(key)
-          println(s"\t\thash key: $key, act: $act, expect: $expect")
           assert(act.key == expect.key)
           assert(act.value == expect.value)
         }

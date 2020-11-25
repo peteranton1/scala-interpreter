@@ -409,11 +409,11 @@ case class VM(constants: List[ObjectLiteral],
       return ErrorObj(s"unusable as hash key: $index")
     }
     val key = index.asInstanceOf[Hashable]
-    val pair = hashObject.pairs(key.hashKey())
-    if (pair == null) {
-      push(Null)
+    val pair = hashObject.pairs.get(key.hashKey())
+    if (pair.isEmpty) {
+      return push(Null)
     }
-    push(pair.value)
+    push(pair.get.value)
   }
 
   def currentFrame(): Frame = {
@@ -421,7 +421,7 @@ case class VM(constants: List[ObjectLiteral],
   }
 
   def pushFrame(f: Frame) {
-    frames.append(f)
+    frames += f
     framesIndex += 1
   }
 
@@ -450,6 +450,12 @@ case class VM(constants: List[ObjectLiteral],
     pushFrame(frame)
 
     sp = frame.basePointer + cl.fn.numLocals
+    // remove closure from stack and any arguments
+    var removeFromStack = 1 + cl.fn.numLocals
+    while(removeFromStack > 0) {
+      pop()
+      removeFromStack -= 1
+    }
     null
   }
 

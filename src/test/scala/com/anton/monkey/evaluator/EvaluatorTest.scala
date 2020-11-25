@@ -180,7 +180,7 @@ class EvaluatorTest extends FunSuite {
     )
 
     for (tt <- tests) {
-      printTTStr(tt)
+      //printTTStr(tt)
       val evaluated = testEval(tt.input)
       testErrorObject(evaluated, tt.expected)
     }
@@ -195,7 +195,7 @@ class EvaluatorTest extends FunSuite {
     )
 
     for (tt <- tests) {
-      printTTInt(tt)
+      //printTTInt(tt)
       val evaluated = testEval(tt.input)
       testIntegerObject(evaluated, tt.expected)
     }
@@ -343,7 +343,7 @@ class EvaluatorTest extends FunSuite {
     arr.pairs.foreachEntry((hashKey, hashPair) => {
       val expected = expectedMap(hashKey)
       println(s"actual: ${hashPair.key}: ${hashPair.value}" +
-        s", expected: ${expected}")
+        s", expected: $expected")
       testIntegerObject(hashPair.value, expected)
     })
   }
