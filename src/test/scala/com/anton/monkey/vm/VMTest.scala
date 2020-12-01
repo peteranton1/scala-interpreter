@@ -14,6 +14,8 @@ class VMTest extends FunSuite {
 
   val NULL_VALUE: Int = -9999
 
+  case class TestObj(input: String, expected: ObjectLiteral)
+
   case class TestHash(input: String, expected: HashObj)
 
   case class TestStr(input: String, expected: String)
@@ -209,9 +211,9 @@ class VMTest extends FunSuite {
 
   test("First Class Functions") {
     val tests = List(
-//      TestInt("let returnsOne = fn() { 1; };" +
-//        "let returnsOneReturner = fn() { returnsOne; };" +
-//        "returnsOneReturner()();", 1),
+      TestInt("let returnsOne = fn() { 1; };" +
+        "let returnsOneReturner = fn() { returnsOne; };" +
+        "returnsOneReturner()();", 1),
       TestInt("let returnsOneReturner = fn() { " +
         "  let returnsOne = fn() { 1; };" +
         "  returnsOne; " +
@@ -222,6 +224,127 @@ class VMTest extends FunSuite {
     runVMTestsInt(tests)
   }
 
+  test("Calling Functions With Bindings") {
+    val tests = List(
+      TestInt("let one = fn() { let one = 1; one }; " +
+        "one();", 1)
+      , TestInt("let oneAndTwo = fn() { " +
+        "    let one = 1; " +
+        "    let two = 2; " +
+        "    one + two; " +
+        "};" +
+        "oneAndTwo();", 3)
+      , TestInt("let oneAndTwo = fn() { " +
+        "  let one = 1;" +
+        "  let two = 2;" +
+        "  one + two;" +
+        "};" +
+        "let threeAndFour = fn() { " +
+        "  let three = 3;" +
+        "  let four = 4;" +
+        "  three + four;" +
+        "};" +
+        "oneAndTwo() + threeAndFour();", 10)
+      , TestInt("let firstFoobar = fn() { " +
+        "  let foobar = 50;" +
+        "  foobar;" +
+        "};" +
+        "let secondFoobar = fn() {" +
+        "  let foobar = 100;" +
+        "  foobar;" +
+        "};" +
+        "firstFoobar() + secondFoobar();", 150)
+      , TestInt("let globalSeed = 50;" +
+        "let minusOne = fn() {" +
+        "  let num = 1;" +
+        "  globalSeed - num;" +
+        "};" +
+        "let minusTwo = fn() {" +
+        "  let num = 2;" +
+        "  globalSeed - num;" +
+        "};" +
+        "minusOne() + minusTwo();", 97)
+    )
+
+    runVMTestsInt(tests)
+  }
+
+  test("Calling Functions with arguments and bindings") {
+    val tests = List(
+      TestInt("let identity = fn(a) { a; };" +
+        "identity(4);", 4)
+      , TestInt("let sum = fn(a, b) { a + b; };" +
+        "sum(1, 2)", 3)
+      , TestInt("let sum = fn(a, b) {" +
+        "  let c = a + b; " +
+        "  c;" +
+        "};" +
+        "sum(1, 2)", 3)
+      , TestInt("let sum = fn(a, b) { " +
+        "  let c = a + b;" +
+        "  c;" +
+        "};" +
+        "sum(1, 2) + sum(3, 4);", 10)
+      , TestInt("let sum = fn(a, b) {" +
+        "  let c = a + b;" +
+        "  c;" +
+        "};" +
+        "let outer = fn() {" +
+        "  sum(1, 2) + sum(3, 4);" +
+        "};" +
+        "outer();", 10)
+      , TestInt("let globalNum = 10;" +
+        "let sum = fn(a, b) {" +
+        "  let c = a + b;" +
+        "  c + globalNum;" +
+        "};" +
+        "let outer = fn() {" +
+        "  sum(1, 2) + sum(3, 4) + globalNum;" +
+        "};" +
+        "outer() + globalNum;", 50)
+    )
+
+    runVMTestsInt(tests)
+  }
+
+  test("Calling Functions With Wrong Arguments") {
+    val tests = List(
+      TestStr("fn() { 1; }(1);",
+      "wrong number of arguments: want=0, got=1"),
+      TestStr("fn(a, b) { a + b; }(1);",
+        "wrong number of arguments: want=2, got=1")
+    )
+
+    for (tt <- tests) {
+      //println("Testing: " + tt.input)
+      val vm: VM = setupVM(tt.input)
+      val err2: ObjectLiteral = runVM(vm)
+      assert(tt.expected == err2.inspect())
+    }
+  }
+
+  test("Builtin Functions") {
+    val tests = List(
+      TestObj("len(\"\")", IntegerObj(0))
+      ,TestObj("len(\"four\")", IntegerObj(4))
+      ,TestObj("len(\"hello world\")", IntegerObj(11))
+      ,TestObj("len(1)",
+        ErrorObj("argument to 'len' not supported, got=1"))
+      ,TestObj("len(\"one\",\"two\")",
+        ErrorObj("wrong number of arguments, got=2, want=1"))
+      ,TestObj("len([1, 2, 3])", IntegerObj(3))
+      ,TestObj("len([])", IntegerObj(0))
+      ,TestObj("puts(\"hello\",\" world\")", Null)
+    )
+
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val vm: VM = setupVM(tt.input)
+      val err2: ObjectLiteral = runVM(vm)
+      assert(tt.expected.toString == vm.lastPopped.inspect())
+    }
+  }
+
   def parse(input: String): Program = {
     val l = Lexer.New(input)
     val p = Parser.New(l)
@@ -229,14 +352,22 @@ class VMTest extends FunSuite {
   }
 
   def getLastPopped(input: String): ObjectLiteral = {
+    val vm: VM = setupVM(input)
+    val err2: ObjectLiteral = runVM(vm)
+    assert(err2 == null)
+    vm.lastPoppedStackElem()
+  }
+
+  private def setupVM(input: String): VM = {
     val program = parse(input)
     val compiler = Compiler.newCompiler()
     val err1 = compiler.compile(program)
     assert(err1 == null)
-    val vm = VM.newVM(compiler.bytecode())
-    val err2 = vm.run()
-    assert(err2 == null)
-    vm.lastPoppedStackElem()
+    VM.newVM(compiler.bytecode())
+  }
+
+  private def runVM(vm: VM): ObjectLiteral = {
+    vm.run()
   }
 
   def runVMTestsStr(tests: List[TestStr]): Unit = {

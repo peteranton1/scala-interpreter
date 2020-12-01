@@ -4,7 +4,7 @@ import com.anton.monkey.code.Code.{OpAdd, OpArray, OpBang, OpCall, OpClosure, Op
 import com.anton.monkey.code.{Code, Instructions}
 import com.anton.monkey.compiler.Bytecode
 import com.anton.monkey.objectliteral.ObjectType.{ARRAY_OBJ, HASH_OBJ, INTEGER_OBJ, STRING_OBJ}
-import com.anton.monkey.objectliteral.{ArrayObj, BooleanObj, BuiltinObj, Closure, CompiledFunction, ErrorObj, HashKey, HashObj, HashPair, Hashable, IntegerObj, NullObj, ObjectLiteral, StringObj}
+import com.anton.monkey.objectliteral.{ArrayObj, BooleanObj, Builtin, BuiltinObj, Closure, CompiledFunction, ErrorObj, HashKey, HashObj, HashPair, Hashable, IntegerObj, NullObj, ObjectLiteral, StringObj}
 import com.anton.monkey.vm.VM.{False, Null, True, stackSize}
 
 import scala.collection.mutable
@@ -196,9 +196,10 @@ case class VM(constants: List[ObjectLiteral],
           }
 
         case OpGetBuiltin =>
-          val frame = popFrame()
-          adjustStackPointer( frame.basePointer - 1 )
-          val err1 = push(Null)
+          val builtinIndex = Code.readUint8(ins.instructionArray,ip+1)
+          currentFrame().ip += 1
+          val definition = Builtin.builtins(builtinIndex)
+          val err1 = push(definition.builtin)
           if(err1 != null){
             return err1
           }
@@ -449,10 +450,11 @@ case class VM(constants: List[ObjectLiteral],
     // Because the stack pointer does not automatically
     // reduce the stack, we have to ensure the stack gets
     // reduced.
-    while(sp > spNew) {
+    val ZERO = 0
+    while(spNew >= ZERO && sp > spNew) {
       pop()
     }
-    while(sp < spNew) {
+    while(sp >= ZERO && sp < spNew) {
       push(Null)
     }
   }
@@ -501,7 +503,7 @@ case class VM(constants: List[ObjectLiteral],
                sp:Int, numArgs: Int): ListBuffer[ObjectLiteral] = {
     val buf = new ListBuffer[ObjectLiteral]()
     var i = sp - numArgs
-    while(i <= sp) {
+    while(i < sp) {
       buf.addOne(aListBuf(i))
       i += 1
     }
