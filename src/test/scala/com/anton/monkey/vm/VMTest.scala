@@ -183,6 +183,45 @@ class VMTest extends FunSuite {
     runVMTestsInt(tests)
   }
 
+  test("Functions with return statement") {
+    val tests = List(
+      TestInt("let earlyExit = fn() { return 99; 100; };" +
+        "earlyExit();", 99),
+      TestInt("let earlyExit = fn() { return 99; return 100; };" +
+        "earlyExit();", 99)
+    )
+
+    runVMTestsInt(tests)
+  }
+
+  test("Functions without return value") {
+    val tests = List(
+      TestInt("let noReturn = fn() { };" +
+        "noReturn();", NULL_VALUE),
+      TestInt("let noReturn = fn() { };" +
+        "let noReturnTwo = fn() { noReturn(); };" +
+        "noReturn();" +
+        "noReturnTwo();", NULL_VALUE)
+    )
+
+    runVMTestsInt(tests)
+  }
+
+  test("First Class Functions") {
+    val tests = List(
+//      TestInt("let returnsOne = fn() { 1; };" +
+//        "let returnsOneReturner = fn() { returnsOne; };" +
+//        "returnsOneReturner()();", 1),
+      TestInt("let returnsOneReturner = fn() { " +
+        "  let returnsOne = fn() { 1; };" +
+        "  returnsOne; " +
+        "};" +
+        "returnsOneReturner()();", 1)
+    )
+
+    runVMTestsInt(tests)
+  }
+
   def parse(input: String): Program = {
     val l = Lexer.New(input)
     val p = Parser.New(l)
@@ -247,7 +286,7 @@ class VMTest extends FunSuite {
         assert(expected == NULL_VALUE)
       case _ =>
         assert("object not integer: " +
-          s"${actual.objType()}" == s"input=$input")
+          s"${actual.objType()}: ${actual.inspect()}" == s"input=$input")
     }
   }
 

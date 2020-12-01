@@ -143,7 +143,7 @@ case class VM(constants: List[ObjectLiteral],
           currentFrame().ip += 2
           val array = buildArray(sp - numElements, sp)
           //below not needed because of buildArray
-          //sp = sp - numElements
+          //adjustStackPointer( sp - numElements)
 
           val err1 = push(array)
           if (err1 != null) {
@@ -181,7 +181,7 @@ case class VM(constants: List[ObjectLiteral],
         case OpReturnValue =>
           val returnValue = pop()
           val frame = popFrame()
-          sp = frame.basePointer - 1
+          adjustStackPointer( frame.basePointer - 1)
           val err1 = push(returnValue)
           if(err1 != null){
             return err1
@@ -189,7 +189,7 @@ case class VM(constants: List[ObjectLiteral],
 
         case OpReturn =>
           val frame = popFrame()
-          sp = frame.basePointer - 1
+          adjustStackPointer( frame.basePointer - 1 )
           val err1 = push(Null)
           if(err1 != null){
             return err1
@@ -197,7 +197,7 @@ case class VM(constants: List[ObjectLiteral],
 
         case OpGetBuiltin =>
           val frame = popFrame()
-          sp = frame.basePointer - 1
+          adjustStackPointer( frame.basePointer - 1 )
           val err1 = push(Null)
           if(err1 != null){
             return err1
@@ -243,8 +243,12 @@ case class VM(constants: List[ObjectLiteral],
   }
 
   def pop(): ObjectLiteral = {
-    if (sp < 0) {
+    if (sp < 1) {
       return ErrorObj(s"Stack Underflow: $sp")
+    }
+    if (stack.length < 1) {
+      return ErrorObj("Stack Underflow: " +
+        s"sp: $sp, stack: ${stack.length}")
     }
     lastPopped = stack.remove(sp-1)
     sp -= 1
@@ -441,6 +445,18 @@ case class VM(constants: List[ObjectLiteral],
     ErrorObj("calling non-function and non-builtin")
   }
 
+  def adjustStackPointer(spNew: Int) {
+    // Because the stack pointer does not automatically
+    // reduce the stack, we have to ensure the stack gets
+    // reduced.
+    while(sp > spNew) {
+      pop()
+    }
+    while(sp < spNew) {
+      push(Null)
+    }
+  }
+
   def callClosure(cl: Closure, numArgs: Int): ErrorObj = {
     if (numArgs != cl.fn.numParameters) {
       return ErrorObj("wrong number of arguments: want=" +
@@ -449,20 +465,14 @@ case class VM(constants: List[ObjectLiteral],
     val frame = Frame.newFrame(cl, sp - numArgs)
     pushFrame(frame)
 
-    sp = frame.basePointer + cl.fn.numLocals
-    // remove closure from stack and any arguments
-    var removeFromStack = 1 + cl.fn.numLocals
-    while(removeFromStack > 0) {
-      pop()
-      removeFromStack -= 1
-    }
+    adjustStackPointer(frame.basePointer + cl.fn.numLocals)
     null
   }
 
   def callBuiltin(builtin: BuiltinObj, numArgs: Int): ErrorObj = {
     val args = getSlice(stack,sp,numArgs)
     val result = builtin.fn(args.toList)
-    sp = sp - numArgs - 1
+    adjustStackPointer( sp - numArgs - 1 )
     if(result != null) {
       push(result)
     } else {
