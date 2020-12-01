@@ -345,6 +345,130 @@ class VMTest extends FunSuite {
     }
   }
 
+  test("Closures") {
+    val tests = List(
+      TestObj("let newClosure = fn(a) {" +
+        "  fn() { a; };" +
+        "};" +
+        "let closure = newClosure(99);" +
+        "closure();", IntegerObj(99))
+      ,TestObj("let newAdder = fn(a, b) {" +
+        "  fn(c) { a + b + c };" +
+        "};" +
+        "let adder = newAdder(1, 2);" +
+        "adder(8);", IntegerObj(11))
+      ,TestObj("let newAdder = fn(a, b) {" +
+        "  let c = a + b;" +
+        "  fn(d) { c + d };" +
+        "};" +
+        "let adder = newAdder(1, 2);" +
+        "adder(8);", IntegerObj(11))
+      ,TestObj("let newAdderOuter = fn(a, b) {" +
+        "  let c = a + b;" +
+        "  fn(d) { " +
+        "    let e = d + c;" +
+        "    fn(f) { e + f; };" +
+        "  };" +
+        "};" +
+        "let newAdderInner = newAdderOuter(1, 2);" +
+        "let adder = newAdderInner(3);" +
+        "adder(8);",
+        IntegerObj(14))
+      ,TestObj("let a = 1;" +
+        "let newAdderOuter = fn(b) {" +
+        "  fn(c) { " +
+        "    fn(d) { a + b + c + d; };" +
+        "  };" +
+        "};" +
+        "let newAdderInner = newAdderOuter(2);" +
+        "let adder = newAdderInner(3);" +
+        "adder(8);",
+        IntegerObj(14))
+      ,TestObj("let newClosure = fn(a, b) {" +
+        "  let one = fn() { a; };" +
+        "  let two = fn() { b; };" +
+        "  fn() { " +
+        "    one() + two();" +
+        "  };" +
+        "};" +
+        "let closure = newClosure(9, 90);" +
+        "closure();", IntegerObj(99))
+    )
+
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val vm: VM = setupVM(tt.input)
+      val err2: ObjectLiteral = runVM(vm)
+      assert(tt.expected.toString == vm.lastPopped.inspect())
+    }
+  }
+
+  test("Recursive Functions") {
+    val tests = List(
+      TestObj("let countDown = fn(x) {" +
+        "  if (x == 0) {" +
+        "    return 0;" +
+        "  } else {" +
+        "    countDown(x - 1);" +
+        "  }" +
+        "};" +
+        "countDown(1);", IntegerObj(0))
+      ,TestObj("let countDown = fn(x) {" +
+        "  if (x == 0) {" +
+        "    return 0;" +
+        "  } else {" +
+        "    countDown(x - 1);" +
+        "  }" +
+        "};" +
+        "let wrapper = fn() {" +
+        "  countDown(1);" +
+        "};" +
+        "wrapper();", IntegerObj(0))
+      ,TestObj("let wrapper = fn() {" +
+        "  let countDown = fn(x) {" +
+        "    if (x == 0) {" +
+        "      return 0;" +
+        "    } else {" +
+        "      countDown(x - 1);" +
+        "    }" +
+        "  };" +
+        "  countDown(1);" +
+        "};" +
+        "wrapper();", IntegerObj(0))
+    )
+
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val vm: VM = setupVM(tt.input)
+      val err2: ObjectLiteral = runVM(vm)
+      assert(tt.expected.toString == vm.lastPopped.inspect())
+    }
+  }
+
+  test("Recursive Fibonacci") {
+    val tests = List(
+      TestObj("let fibonacci = fn(x) {" +
+        "  if (x == 0) {" +
+        "    return 0;" +
+        "  } else {" +
+        "    if (x == 1) {" +
+        "      return 1;" +
+        "    } else {" +
+        "      fibonacci(x - 1) + fibonacci(x - 2);" +
+        "    }" +
+        "  }" +
+        "};" +
+        "fibonacci(15);", IntegerObj(610))
+    )
+
+    for (tt <- tests) {
+      println("Testing: " + tt.input)
+      val vm: VM = setupVM(tt.input)
+      val err2: ObjectLiteral = runVM(vm)
+      assert(tt.expected.toString == vm.lastPopped.inspect())
+    }
+  }
+
   def parse(input: String): Program = {
     val l = Lexer.New(input)
     val p = Parser.New(l)
