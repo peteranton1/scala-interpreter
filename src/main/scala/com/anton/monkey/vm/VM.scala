@@ -1,10 +1,10 @@
 package com.anton.monkey.vm
 
-import com.anton.monkey.code.Code.{OpAdd, OpArray, OpBang, OpCall, OpClosure, OpCode, OpConstant, OpCurrentClosure, OpDiv, OpEqual, OpFalse, OpGetBuiltin, OpGetFree, OpGetGlobal, OpGetLocal, OpGreaterThan, OpHash, OpIndex, OpJump, OpJumpNotTruthy, OpMinus, OpMul, OpNotEqual, OpNull, OpPop, OpReturn, OpReturnValue, OpSetGlobal, OpSetLocal, OpSub, OpTrue, readUint16}
+import com.anton.monkey.code.Code._
 import com.anton.monkey.code.{Code, Instructions}
 import com.anton.monkey.compiler.Bytecode
 import com.anton.monkey.objectliteral.ObjectType.{ARRAY_OBJ, HASH_OBJ, INTEGER_OBJ, STRING_OBJ}
-import com.anton.monkey.objectliteral.{ArrayObj, BooleanObj, Builtin, BuiltinObj, Closure, CompiledFunction, ErrorObj, HashKey, HashObj, HashPair, Hashable, IntegerObj, NullObj, ObjectLiteral, StringObj}
+import com.anton.monkey.objectliteral._
 import com.anton.monkey.vm.VM.{False, Null, True, stackSize}
 
 import scala.collection.mutable

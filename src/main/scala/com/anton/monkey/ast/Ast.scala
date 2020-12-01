@@ -1,6 +1,5 @@
 package com.anton.monkey.ast
 
-import com.anton.monkey.objectliteral.BooleanObj
 import com.anton.monkey.token.Token
 
 import scala.collection.mutable.ListBuffer

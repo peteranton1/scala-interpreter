@@ -176,8 +176,8 @@ case class Closure(fn: CompiledFunction,
 
 object ObjectType {
   def md5HashString(s: String): Int = {
-    import java.security.MessageDigest
     import java.math.BigInteger
+    import java.security.MessageDigest
     val md = MessageDigest.getInstance("MD5")
     val digest = md.digest(s.getBytes)
     val bigInt = new BigInteger(1, digest)

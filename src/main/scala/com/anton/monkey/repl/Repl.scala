@@ -1,6 +1,6 @@
 package com.anton.monkey.repl
 
-import java.io.{InputStream, InputStreamReader, OutputStream, OutputStreamWriter}
+import java.io.InputStream
 import java.util.Scanner
 
 import com.anton.monkey.ast.Program
