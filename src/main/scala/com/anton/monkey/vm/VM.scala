@@ -11,10 +11,10 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 case class VM(constants: List[ObjectLiteral],
-              stack: ListBuffer[ObjectLiteral],
+              stack: Array[ObjectLiteral],
               var sp: Int,
               globals: ListBuffer[ObjectLiteral],
-              frames: ListBuffer[Frame],
+              frames: Array[Frame],
               var framesIndex: Int) {
   var lastPopped: ObjectLiteral = Null
 
@@ -238,7 +238,7 @@ case class VM(constants: List[ObjectLiteral],
     if (sp >= stackSize) {
       return ErrorObj(s"Stack Overflow: $sp")
     }
-    stack += obj
+    stack(sp) = obj
     sp += 1
     null
   }
@@ -251,7 +251,7 @@ case class VM(constants: List[ObjectLiteral],
       return ErrorObj("Stack Underflow: " +
         s"sp: $sp, stack: ${stack.length}")
     }
-    lastPopped = stack.remove(sp-1)
+    lastPopped = stack(sp-1)
     sp -= 1
     lastPopped
   }
@@ -426,13 +426,13 @@ case class VM(constants: List[ObjectLiteral],
   }
 
   def pushFrame(f: Frame) {
-    frames += f
+    frames(framesIndex) = f
     framesIndex += 1
   }
 
   def popFrame(): Frame = {
     framesIndex -= 1
-    frames.remove(framesIndex)
+    frames(framesIndex)
   }
 
   def executeCall(numArgs: Int): ErrorObj = {
@@ -499,15 +499,16 @@ case class VM(constants: List[ObjectLiteral],
     push(closure)
   }
 
-  def getSlice(aListBuf: ListBuffer[ObjectLiteral],
-               sp:Int, numArgs: Int): ListBuffer[ObjectLiteral] = {
-    val buf = new ListBuffer[ObjectLiteral]()
-    var i = sp - numArgs
-    while(i < sp) {
-      buf.addOne(aListBuf(i))
+  def getSlice(aStack: Array[ObjectLiteral],
+               sp:Int, numArgs: Int): Array[ObjectLiteral] = {
+    val localStackSize = sp - numArgs
+    val aLocalStack = new Array[ObjectLiteral](localStackSize)
+    var i = 0
+    while(i < localStackSize) {
+      aLocalStack(i) = aStack(sp - i)
       i += 1
     }
-    buf
+    aLocalStack
   }
 
   def isTruthy(obj: ObjectLiteral): Boolean = {
@@ -525,7 +526,7 @@ object VM {
   val stackSize = 2048
 
   // MaxFrames const
-  val maxFrames = 1024
+  val maxFrames = 1048
 
   // True var
   val True: BooleanObj = BooleanObj(true)
@@ -543,10 +544,12 @@ object VM {
     val mainFn = CompiledFunction(bytecode.instructions, 0, 0)
     val mainClosure = Closure(mainFn, List())
     val mainFrame = Frame.newFrame(mainClosure, 0)
-    val frames = new ListBuffer[Frame]().addOne(mainFrame)
+    val stack = new Array[ObjectLiteral](stackSize)
+    val frames = new Array[Frame](maxFrames)
+    frames(0) = mainFrame
     new VM(
       constants = bytecode.constants,
-      stack = new ListBuffer(),
+      stack = stack,
       sp = 0,
       globals = new ListBuffer(),
       frames = frames,

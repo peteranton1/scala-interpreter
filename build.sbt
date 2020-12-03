@@ -26,6 +26,7 @@ version := "1.0"
 // You can define other libraries as dependencies in your build like this:
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+libraryDependencies += "org.apache.commons" %% "commons-lang3" % "3.7"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test
 
 // Here, `libraryDependencies` is a set of dependencies, and by using `+=`,
